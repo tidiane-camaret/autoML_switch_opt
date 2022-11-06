@@ -145,8 +145,7 @@ def minimize_custom(objective,
     return X,F
 
 
-def norm_function(x):
-        return (x-1)**2
+
 
 def rosen_function(x):
     return torch.sum(100.0 * (x[1:] - x[:-1] ** 2.0) ** 2.0 + (1 - x[:-1]) ** 2.0)

@@ -32,7 +32,7 @@ norm_policy = stable_baselines3.PPO('MlpPolicy',
                                     tensorboard_log='tb_logs/norm')
 
 
-total_timesteps = 10000 #20*40*90
+total_timesteps = 20000 #20*40*90
 
 #quadratic_policy.learn(total_timesteps=20 * quadratic_env.envs[0].num_steps * len(norm_dataset))
 norm_policy.learn(total_timesteps=total_timesteps)
@@ -46,7 +46,7 @@ def run_policy(n_steps):
   
   for step in range(n_steps):
     action, _ = norm_policy.predict(obs, deterministic=True)
-    actions.append(action)
+    actions.append(lr_values[action])
     print("Step {}".format(step + 1))
     print("Action: ", lr_values[action])
     obs, reward, done, info = norm_env.step(action)
