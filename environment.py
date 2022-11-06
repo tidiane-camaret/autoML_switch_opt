@@ -137,6 +137,28 @@ class Environment(gym.Env):
         return observation, reward, done, info
 
 
+def eval_handcrafted_optimizer(problem_list, optimizer_class, num_steps, do_init_weights=False):
+    """
+    Run an optimizer on a list of problems
+    """
+    rewards = []
+    for problem in problem_list:
+        model = copy.deepcopy(problem["model0"])
+        if do_init_weights:
+            model.apply(init_weights)
+
+        optimizer = optimizer_class(model.parameters(), lr=0.1)
+        obj_values = []
+        for step in range(num_steps):
+            obj_value = problem["obj_function"](model)
+            obj_values.append(-obj_value.detach().numpy())
+            optimizer.zero_grad()
+            obj_value.backward()
+            optimizer.step()
+        rewards.append(obj_values)
+    return np.array(rewards)
+
+
 
 
 
