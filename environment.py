@@ -1,4 +1,4 @@
-### define the environment
+import copy
 import gym 
 import torch
 from gym import spaces
@@ -10,7 +10,6 @@ def init_weights(m):
     if isinstance(m, nn.Linear):
         torch.nn.init.xavier_uniform_(m.weight)
         m.bias.data.fill_(0.01)
-
 
 def make_observation(obj_value, obj_values, gradients, num_params, history_len):
     # Features is a matrix where the ith row is a concatenation of the difference
@@ -32,22 +31,20 @@ class Environment(gym.Env):
     def __init__(
         self,
         problem_list,
-        model,
         num_steps,
         history_len,
-        objective_function,
         optimizer_class_list = [torch.optim.SGD, torch.optim.Adam],
+        do_init_weights = True,
 
     ):
 
         super().__init__()
 
         self.problem_list = problem_list # list of problems 
-        self.model = model # model to optimize
         self.num_steps = num_steps # number of maximum steps per problem
         self.history_len = history_len # number of previous steps to keep in the observation
         self.optimizer_class_list = optimizer_class_list
-        self.objective_function = objective_function
+        self.do_init_weights = do_init_weights
         self._setup_episode()
         self.num_params = sum(p.numel() for p in self.model.parameters())
 
@@ -69,8 +66,10 @@ class Environment(gym.Env):
     # starting of a new episode
     def _setup_episode(self):
         problem = np.random.choice(self.problem_list)
-
-        self.model.apply(init_weights)
+        self.model = copy.deepcopy(problem["model0"])
+        self.objective_function = problem["obj_function"]  
+        if self.do_init_weights:       
+            self.model.apply(init_weights)
         #self.model.weight.data.random_(-1, 1)
         #self.model.bias.data.random_(-1, 1)
 

@@ -3,6 +3,12 @@ from torch import nn
 import numpy as np 
 from torch.nn import functional as F
 
+def init_weights(m): 
+    # initialize weights of the model m 
+    if isinstance(m, nn.Linear):
+        torch.nn.init.xavier_uniform_(m.weight)
+        m.bias.data.fill_(0.01)
+
 def mlp_problem():
     num_vars = 2
 
@@ -33,6 +39,8 @@ def mlp_problem():
     model0 = nn.Sequential(
         nn.Linear(num_vars, 2), nn.ReLU(), nn.Linear(2, 1), nn.Sigmoid()
     )
+
+    model0.apply(init_weights)
 
     def obj_function(model):
         y_hat = model(x).view(-1)

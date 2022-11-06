@@ -3,6 +3,7 @@ from problem import MLP_problem
 import torch 
 from stable_baselines3.common.env_checker import check_env
 import stable_baselines3
+import numpy as np  
 
 # define the problem list
 problem_list = [MLP_problem for _ in range(10)]
@@ -10,10 +11,8 @@ problem_list = [MLP_problem for _ in range(10)]
 
 # define the environment based on the problem list
 env = Environment(problem_list = problem_list,
-                 model =  MLP_problem["model0"],
                  num_steps = 100, 
                  history_len = 10, 
-                 objective_function = MLP_problem["obj_function"],
                  optimizer_class_list=[torch.optim.SGD, torch.optim.Adam]
                  )
 
@@ -31,15 +30,15 @@ policy.learn(total_timesteps=total_timesteps)
 
 
 # test the agent
-def test_agent(env, policy, num_episodes=10, num_steps=100):
-    actions, rewards = [], []
+def eval_agent(env, policy, num_episodes=10, num_steps=100):
+    actions, rewards = np.zeros((num_episodes, num_steps)), np.zeros((num_episodes, num_steps))
     for episode in range(num_episodes):
         obs = env.reset()
         for step in range(num_steps):
             action, _states = policy.predict(obs)
-            actions.append(action)
             obs, reward, done, info = env.step(action)
-            rewards.append(reward)
+            actions[episode, step] = action
+            rewards[episode, step] = reward
             if done:
                 break
     return actions, rewards
