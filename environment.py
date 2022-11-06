@@ -96,8 +96,6 @@ class Environment(gym.Env):
 
         # define the optimizer
         optimizer_class = self.optimizer_class_list[action]
-        
-        print("optimizer_class", optimizer_class)
 
         optimizer = optimizer_class(self.model.parameters(), lr=0.01)
         

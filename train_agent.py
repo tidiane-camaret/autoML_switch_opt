@@ -31,21 +31,35 @@ policy.learn(total_timesteps=total_timesteps)
 
 
 # test the agent
-# Test the trained agent
-actions = []
-obs = env.reset()
-n_steps = 20
-for step in range(n_steps):
-  action, _ = policy.predict(obs, deterministic=True)
-  actions.append(action)
-  print("Step {}".format(step + 1))
-  print("Action: ", action)
-  obs, reward, done, info = env.step(action)
-  #print('obs=', obs, 'reward=', reward, 'done=', done)
-  print('reward=', reward)
-  #norm_env.render(mode='console')
-  if done:
-    # Note that the VecEnv resets automatically
-    # when a done signal is encountered
-    print("Goal reached!", "reward=", reward)
-    break
+def test_agent(env, policy, num_episodes=10, num_steps=100):
+    actions, rewards = [], []
+    for episode in range(num_episodes):
+        obs = env.reset()
+        for step in range(num_steps):
+            action, _states = policy.predict(obs)
+            actions.append(action)
+            obs, reward, done, info = env.step(action)
+            rewards.append(reward)
+            if done:
+                break
+    return actions, rewards
+
+"""
+  actions, rewards = [], []
+  obs = env.reset()
+  for step in range(num_steps):
+    action, _ = policy.predict(obs, deterministic=True)
+    actions.append(action)
+    #print("Step {}".format(step + 1))
+    #print("Action: ", action)
+    obs, reward, done, info = env.step(action)
+    #print('obs=', obs, 'reward=', reward, 'done=', done)
+    #print('reward=', reward)
+    #norm_env.render(mode='console')
+    rewards.append(reward)
+    if done:
+      # Note that the VecEnv resets automatically
+      # when a done signal is encountered
+      print("Goal reached!", "reward=", reward)
+      break
+"""
