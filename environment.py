@@ -3,7 +3,13 @@ import gym
 import torch
 from gym import spaces
 import numpy as np
+from torch import nn
 
+def init_weights(m): 
+    # initialize weights of the model m 
+    if isinstance(m, nn.Linear):
+        torch.nn.init.xavier_uniform_(m.weight)
+        m.bias.data.fill_(0.01)
 
 
 def make_observation(obj_value, obj_values, gradients, num_params, history_len):
@@ -60,71 +66,78 @@ class Environment(gym.Env):
             dtype=np.float32,
         )
 
-        # starting of a new episode
-        def _setup_episode(self):
-            problem = np.random.choice(self.problem_list)
+    # starting of a new episode
+    def _setup_episode(self):
+        problem = np.random.choice(self.problem_list)
 
-            self.model.weight.data.random_(-1, 1)
-            self.model.bias.data.random_(-1, 1)
+        self.model.apply(init_weights)
+        #self.model.weight.data.random_(-1, 1)
+        #self.model.bias.data.random_(-1, 1)
 
-            self.obj_values = []
-            self.gradients = []
-            self.current_step = 0
+        self.obj_values = []
+        self.gradients = []
+        self.current_step = 0
 
-        # reset the environment when the episode is over
-        def reset(self):
-            self._setup_episode()
-            return make_observation(
-                None, self.obj_values, self.gradients, self.num_params, self.history_len
-            )
+    # reset the environment when the episode is over
+    def reset(self):
+        self._setup_episode()
+        return make_observation(
+            None, self.obj_values, self.gradients, self.num_params, self.history_len
+        )
 
-        # define the action : pick an optimizer 
-        # and update the model
+    # define the action : pick an optimizer 
+    # and update the model
 
-        def step(self, action):
-            # here, an action is given by the agent
-            # it is the index of the optimizer class
-            # that we want to use on the next step
-            # we calulate the new state and the reward
+    def step(self, action):
+        # here, an action is given by the agent
+        # it is the index of the optimizer class
+        # that we want to use on the next step
+        # we calulate the new state and the reward
 
-            # define the optimizer
-            optimizer = self.optimizer_class_list[action](self.model.parameters())
-            
-            # update the model and 
-            # calculate the new objective value
-            optimizer.zero_grad() #do we need this ?
-            obj_value = self.objective_function(self.model)
-            obj_value.backward()
-            optimizer.step()
+        # define the optimizer
+        optimizer_class = self.optimizer_class_list[action]
+        
+        print("optimizer_class", optimizer_class)
 
-            # Calculate the current gradient and flatten it
-            current_grad = torch.cat(
-                [p.grad.flatten() for p in self.model.parameters()]
-            ).flatten()
+        optimizer = optimizer_class(self.model.parameters(), lr=0.01)
+        
+        #(self.model.parameters())
+        
+        # update the model and 
+        # calculate the new objective value
+        optimizer.zero_grad() #do we need this ?
+        obj_value = self.objective_function(self.model)
+        obj_value.backward()
+        optimizer.step()
+
+        # Calculate the current gradient and flatten it
+        current_grad = torch.cat(
+            [p.grad.flatten() for p in self.model.parameters()]
+        ).flatten()
 
 
-            # Update history of objective values and gradients with current objective
-            # value and gradient.
-            if len(self.obj_values) >= self.history_len:
-                self.obj_values.pop(-1)
-                self.gradients.pop(-1)
-            self.obj_values.insert(0, obj_value)
-            self.gradients.insert(0, current_grad)
+        # Update history of objective values and gradients with current objective
+        # value and gradient.
+        if len(self.obj_values) >= self.history_len:
+            self.obj_values.pop(-1)
+            self.gradients.pop(-1)
+        self.obj_values.insert(0, obj_value)
+        self.gradients.insert(0, current_grad)
 
-            # Return observation, reward, done, and empty info
-            observation = make_observation(
-                obj_value.item(),
-                self.obj_values,
-                self.gradients,
-                self.num_params,
-                self.history_len,
-            )
-            reward = -obj_value.item()
-            done = self.current_step >= self.num_steps
-            info = {}
+        # Return observation, reward, done, and empty info
+        observation = make_observation(
+            obj_value.item(),
+            self.obj_values,
+            self.gradients,
+            self.num_params,
+            self.history_len,
+        )
+        reward = -obj_value.item()
+        done = self.current_step >= self.num_steps
+        info = {}
 
-            self.current_step += 1
-            return observation, reward, done, info
+        self.current_step += 1
+        return observation, reward, done, info
 
 
 
