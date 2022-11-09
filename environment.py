@@ -62,6 +62,10 @@ class Environment(gym.Env):
             shape=(self.history_len, 1 + self.num_params),
             dtype=np.float32,
         )
+        #create a numpy array of trained optimizers, initially filled with nans
+        
+        self.trained_optimizers = dict.fromkeys(optimizer_class_list)
+        print(self.trained_optimizers)
 
     # starting of a new episode
     def _setup_episode(self):
@@ -95,8 +99,23 @@ class Environment(gym.Env):
 
         # define the optimizer
         optimizer_class = self.optimizer_class_list[action]
+        
+        if(not self.trained_optimizers[optimizer_class]):
+            print("optimizer new")
+            #we havent used this optimiser before
+            #initialise optimiser
+            
+            optimizer = optimizer_class(self.model.parameters(), lr=0.01)
+            #run optimizer
+            
+             
+        else:
+            #we have used it before, so we access it again
+            optimizer = self.trained_optimizers[optimizer_class]
+            #run it
+            
 
-        optimizer = optimizer_class(self.model.parameters(), lr=0.01)
+        
         
         #(self.model.parameters())
         
@@ -106,6 +125,10 @@ class Environment(gym.Env):
         obj_value = self.objective_function(self.model)
         obj_value.backward()
         optimizer.step()
+        #add the updated optimizer into list
+        self.trained_optimizers[optimizer_class] = optimizer
+        opt_s = optimizer.state_dict()
+        print(opt_s)
 
         # Calculate the current gradient and flatten it
         current_grad = torch.cat(
