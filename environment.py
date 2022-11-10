@@ -7,15 +7,13 @@ from torch import nn
 import copy
 
 
-
-
 def make_observation(obj_value, obj_values, gradients, num_params, history_len):
     # Features is a matrix where the ith row is a concatenation of the difference
     # in the current objective value and that of the ith previous iterate as well
     # as the ith previous gradient.
     observation = np.zeros((history_len, 1 + num_params), dtype="float32")
     observation[: len(obj_values), 0] = (
-        obj_value - torch.tensor(obj_values).detach().numpy()
+            obj_value - torch.tensor(obj_values).detach().numpy()
     )
     for i, grad in enumerate(gradients):
         observation[i, 1:] = grad.detach().numpy()
@@ -29,10 +27,10 @@ class Environment(gym.Env):
     """Optimization environment based on TF-Agents."""
 
     def __init__(
-        self,
-        dataset,
-        num_steps,
-        history_len,
+            self,
+            dataset,
+            num_steps,
+            history_len,
     ):
         super().__init__()
 
@@ -75,7 +73,7 @@ class Environment(gym.Env):
         action = torch.from_numpy(action)
         param_counter = 0
         for p in self.model.parameters():
-            delta_p = action[param_counter : param_counter + p.numel()]
+            delta_p = action[param_counter: param_counter + p.numel()]
             p.add_(delta_p.reshape(p.shape))
             param_counter += p.numel()
 

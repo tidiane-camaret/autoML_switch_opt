@@ -1,7 +1,6 @@
 import numpy as np
 
 
-
 # test the agent
 def eval_agent(env, policy, num_episodes=10, num_steps=100):
     actions, rewards = np.zeros((num_episodes, num_steps)), np.zeros((num_episodes, num_steps))

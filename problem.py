@@ -1,6 +1,6 @@
-import torch 
+import torch
 from torch import nn
-import numpy as np 
+import numpy as np
 
 
 def mlp_problem():
@@ -11,7 +11,7 @@ def mlp_problem():
         torch.distributions.multivariate_normal.MultivariateNormal(
             loc=torch.randn(num_vars),
             covariance_matrix=torch.eye(num_vars) * torch.rand(1),
-            #scale_tril=torch.tril(torch.randn((num_vars, num_vars))),
+            # scale_tril=torch.tril(torch.randn((num_vars, num_vars))),
         )
         for _ in range(4)
     ]
@@ -29,7 +29,5 @@ def mlp_problem():
     perm = torch.randperm(len(x))
     x = x[perm]
     y = y[perm]
-
-
 
     return x, y
