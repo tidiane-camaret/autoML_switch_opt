@@ -1,3 +1,4 @@
 tb_logs/
 *.pyc
 __pycache__/environment.cpython-310.pyc
+.spyproject/

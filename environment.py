@@ -64,18 +64,16 @@ class Environment(gym.Env):
         )
         #create a numpy array of trained optimizers, initially filled with nans
         
-        self.trained_optimizers = dict.fromkeys(optimizer_class_list)
-        print(self.trained_optimizers)
+
 
     # starting of a new episode
     def _setup_episode(self):
         problem = np.random.choice(self.problem_list)
-        self.model = copy.deepcopy(problem["model0"])
-        self.objective_function = problem["obj_function"]  
+        self.model = copy.deepcopy(problem.model0)
+        self.objective_function = problem.obj_function  
         if self.do_init_weights:       
             self.model.apply(init_weights)
-        #self.model.weight.data.random_(-1, 1)
-        #self.model.bias.data.random_(-1, 1)
+        self.trained_optimizers = dict.fromkeys(self.optimizer_class_list)
 
         self.obj_values = []
         self.gradients = []
@@ -99,36 +97,31 @@ class Environment(gym.Env):
 
         # define the optimizer
         optimizer_class = self.optimizer_class_list[action]
-        
-        if(not self.trained_optimizers[optimizer_class]):
-            print("optimizer new")
-            #we havent used this optimiser before
-            #initialise optimiser
-            
-            optimizer = optimizer_class(self.model.parameters(), lr=0.01)
-            #run optimizer
-            
-             
-        else:
-            #we have used it before, so we access it again
-            optimizer = self.trained_optimizers[optimizer_class]
-            #run it
-            
 
-        
+        optimizer = optimizer_class(self.model.parameters(), lr=0.01)
+
+             
+        if self.trained_optimizers[optimizer_class]:
+            #print("optimizer known")
+            #we have used it before, so we access it again
+            optimizer.load_state_dict(self.trained_optimizers[optimizer_class])
+
         
         #(self.model.parameters())
         
         # update the model and 
         # calculate the new objective value
-        optimizer.zero_grad() #do we need this ?
-        obj_value = self.objective_function(self.model)
-        obj_value.backward()
-        optimizer.step()
+        with torch.enable_grad():
+            
+            obj_value = self.objective_function(self.model)
+            optimizer.zero_grad() 
+            obj_value.backward()
+            optimizer.step()
+            #optimizer.zero_grad()
         #add the updated optimizer into list
-        self.trained_optimizers[optimizer_class] = optimizer
-        opt_s = optimizer.state_dict()
-        print(opt_s)
+        self.trained_optimizers[optimizer_class] = optimizer.state_dict()
+
+        #print(opt_s)
 
         # Calculate the current gradient and flatten it
         current_grad = torch.cat(
@@ -166,14 +159,14 @@ def eval_handcrafted_optimizer(problem_list, optimizer_class, num_steps, do_init
     """
     rewards = []
     for problem in problem_list:
-        model = copy.deepcopy(problem["model0"])
+        model = copy.deepcopy(problem.model0)
         if do_init_weights:
             model.apply(init_weights)
 
-        optimizer = optimizer_class(model.parameters(), lr=0.1)
+        optimizer = optimizer_class(model.parameters(), lr=0.01)
         obj_values = []
         for step in range(num_steps):
-            obj_value = problem["obj_function"](model)
+            obj_value = problem.obj_function(model)
             obj_values.append(-obj_value.detach().numpy())
             optimizer.zero_grad()
             obj_value.backward()
