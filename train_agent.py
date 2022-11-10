@@ -12,7 +12,7 @@ problem_list = [MLP_problem for _ in range(10)]
 # define the environment based on the problem list
 env = Environment(problem_list = problem_list,
                  num_steps = 100, 
-                 history_len = 10, 
+                 history_len = 1, 
                  optimizer_class_list=[torch.optim.SGD, torch.optim.Adam]
                  )
 
@@ -24,13 +24,13 @@ policy = stable_baselines3.PPO('MlpPolicy', env, n_steps=2, verbose=0,
                                          tensorboard_log='tb_logs/norm')
 
 # train the agent
-total_timesteps = 1000
+total_timesteps =100
 policy.learn(total_timesteps=total_timesteps)
 
 
 
 # test the agent
-def eval_agent(env, policy, num_episodes=10, num_steps=100):
+def eval_agent(env, policy, num_episodes=1, num_steps=5):
     actions, rewards = np.zeros((num_episodes, num_steps)), np.zeros((num_episodes, num_steps))
     for episode in range(num_episodes):
         obs = env.reset()
