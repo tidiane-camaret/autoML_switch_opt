@@ -1,15 +1,12 @@
 ### define the environment
-import gym 
+import gym
 import torch
 from gym import spaces
 import numpy as np
 from torch import nn
+import copy
 
-def init_weights(m): 
-    # initialize weights of the model m 
-    if isinstance(m, nn.Linear):
-        torch.nn.init.xavier_uniform_(m.weight)
-        m.bias.data.fill_(0.01)
+
 
 
 def make_observation(obj_value, obj_values, gradients, num_params, history_len):
@@ -29,36 +26,27 @@ def make_observation(obj_value, obj_values, gradients, num_params, history_len):
 
 
 class Environment(gym.Env):
+    """Optimization environment based on TF-Agents."""
+
     def __init__(
         self,
-        problem_list,
-        model,
+        dataset,
         num_steps,
         history_len,
-        objective_function,
-        optimizer_class_list = [torch.optim.SGD, torch.optim.Adam],
-
     ):
-
         super().__init__()
 
-        self.problem_list = problem_list # list of problems 
-        self.model = model # model to optimize
-        self.num_steps = num_steps # number of maximum steps per problem
-        self.history_len = history_len # number of previous steps to keep in the observation
-        self.optimizer_class_list = optimizer_class_list
-        self.objective_function = objective_function
+        self.dataset = dataset
+        self.num_steps = num_steps
+        self.history_len = history_len
+
         self._setup_episode()
         self.num_params = sum(p.numel() for p in self.model.parameters())
 
         # Define action and observation space
-        # Action space is the index of the optimizer class 
-        # that we want to use on the next step
-        self.action_space = spaces.Discrete(len(self.optimizer_class_list))
-
-        # Observation space is the history of 
-        # the objective values and gradients
-
+        self.action_space = spaces.Box(
+            low=-1, high=1, shape=(self.num_params,), dtype=np.float32
+        )
         self.observation_space = spaces.Box(
             low=-1,
             high=1,
@@ -66,55 +54,41 @@ class Environment(gym.Env):
             dtype=np.float32,
         )
 
-    # starting of a new episode
     def _setup_episode(self):
-        problem = np.random.choice(self.problem_list)
-
-        self.model.apply(init_weights)
-        #self.model.weight.data.random_(-1, 1)
-        #self.model.bias.data.random_(-1, 1)
+        res = np.random.choice(self.dataset)
+        self.model = copy.deepcopy(res["model0"])
+        self.obj_function = res["obj_function"]
 
         self.obj_values = []
         self.gradients = []
         self.current_step = 0
 
-    # reset the environment when the episode is over
     def reset(self):
         self._setup_episode()
         return make_observation(
             None, self.obj_values, self.gradients, self.num_params, self.history_len
         )
 
-    # define the action : pick an optimizer 
-    # and update the model
-
+    @torch.no_grad()
     def step(self, action):
-        # here, an action is given by the agent
-        # it is the index of the optimizer class
-        # that we want to use on the next step
-        # we calulate the new state and the reward
+        # Update the parameters according to the action
+        action = torch.from_numpy(action)
+        param_counter = 0
+        for p in self.model.parameters():
+            delta_p = action[param_counter : param_counter + p.numel()]
+            p.add_(delta_p.reshape(p.shape))
+            param_counter += p.numel()
 
-        # define the optimizer
-        optimizer_class = self.optimizer_class_list[action]
-        
-        print("optimizer_class", optimizer_class)
-
-        optimizer = optimizer_class(self.model.parameters(), lr=0.01)
-        
-        #(self.model.parameters())
-        
-        # update the model and 
-        # calculate the new objective value
-        optimizer.zero_grad() #do we need this ?
-        obj_value = self.objective_function(self.model)
-        obj_value.backward()
-        optimizer.step()
+        # Calculate the new objective value
+        with torch.enable_grad():
+            self.model.zero_grad()
+            obj_value = self.obj_function(self.model)
+            obj_value.backward()
 
         # Calculate the current gradient and flatten it
         current_grad = torch.cat(
             [p.grad.flatten() for p in self.model.parameters()]
         ).flatten()
-
 
         # Update history of objective values and gradients with current objective
         # value and gradient.
@@ -138,11 +112,3 @@ class Environment(gym.Env):
 
         self.current_step += 1
         return observation, reward, done, info
-
-
-
-
-
-
-
-
