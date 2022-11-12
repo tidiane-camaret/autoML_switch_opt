@@ -1,10 +1,16 @@
-### define the environment
+import copy
 import gym
 import torch
 from gym import spaces
 import numpy as np
 from torch import nn
-import copy
+
+
+def init_weights(m):
+    # initialize weights of the model m
+    if isinstance(m, nn.Linear):
+        torch.nn.init.xavier_uniform_(m.weight)
+        m.bias.data.fill_(0.01)
 
 
 def make_observation(obj_value, obj_values, gradients, num_params, history_len):
@@ -24,64 +30,110 @@ def make_observation(obj_value, obj_values, gradients, num_params, history_len):
 
 
 class Environment(gym.Env):
-    """Optimization environment based on TF-Agents."""
-
     def __init__(
             self,
-            dataset,
+            problem_list,
             num_steps,
             history_len,
+            optimizer_class_list,
+            do_init_weights=True,
+
     ):
+
         super().__init__()
 
-        self.dataset = dataset
-        self.num_steps = num_steps
-        self.history_len = history_len
-
+        self.problem_list = problem_list  # list of problems
+        self.num_steps = num_steps  # number of maximum steps per problem
+        self.history_len = history_len  # number of previous steps to keep in the observation
+        self.optimizer_class_list = optimizer_class_list
+        self.do_init_weights = do_init_weights
         self._setup_episode()
         self.num_params = sum(p.numel() for p in self.model.parameters())
 
         # Define action and observation space
-        self.action_space = spaces.Box(
-            low=-1, high=1, shape=(self.num_params,), dtype=np.float32
-        )
+        # Action space is the index of the optimizer class
+        # that we want to use on the next step
+        self.action_space = spaces.Discrete(len(self.optimizer_class_list))
+
+        # Observation space is the history of
+        # the objective values and gradients
+
         self.observation_space = spaces.Box(
             low=-1,
             high=1,
             shape=(self.history_len, 1 + self.num_params),
             dtype=np.float32,
         )
+        # create a numpy array of trained optimizers, initially filled with nans
 
+    # starting of a new episode
     def _setup_episode(self):
-        res = np.random.choice(self.dataset)
-        self.model = copy.deepcopy(res["model0"])
-        self.obj_function = res["obj_function"]
+        problem = np.random.choice(self.problem_list)
+        # print(problem, type(problem))
+
+        self.model = copy.deepcopy(problem.model0)
+        self.objective_function = problem.obj_function
+        if self.do_init_weights:
+            self.model.apply(init_weights)
+        self.trained_optimizers = dict.fromkeys(self.optimizer_class_list)
+        for key, _ in self.trained_optimizers.items():
+            # initialise the optimisers
+            optimizer_init = key(self.model.parameters(), lr=0.01)
+            self.trained_optimizers[key] = optimizer_init
 
         self.obj_values = []
         self.gradients = []
         self.current_step = 0
 
+    # reset the environment when the episode is over
     def reset(self):
         self._setup_episode()
         return make_observation(
             None, self.obj_values, self.gradients, self.num_params, self.history_len
         )
 
-    @torch.no_grad()
-    def step(self, action):
-        # Update the parameters according to the action
-        action = torch.from_numpy(action)
-        param_counter = 0
-        for p in self.model.parameters():
-            delta_p = action[param_counter: param_counter + p.numel()]
-            p.add_(delta_p.reshape(p.shape))
-            param_counter += p.numel()
+    # define the action : pick an optimizer
+    # and update the model
 
-        # Calculate the new objective value
+    def step(self, action):
+        # here, an action is given by the agent
+        # it is the index of the optimizer class
+        # that we want to use on the next step
+        # we calulate the new state and the reward
+
+        # update the parameters of all optimizers,
+        # this is to take care of information passing across optimizers of different classes
+
+        for opt_class in self.optimizer_class_list:
+            # calculate the gradients for all optimizers
+            current_optimizer = self.trained_optimizers[opt_class]
+            # optimizer.load_state_dict(self.trained_optimizers[opt_class]) #do we need this?
+            with torch.enable_grad():
+                obj_value = self.objective_function(self.model)
+                current_optimizer.zero_grad()
+                obj_value.backward()
+            # add the updated optimizer into list
+            self.trained_optimizers[opt_class] = current_optimizer
+
+        # use the optimizer that the agent selected to update model params
+        optimizer_class = self.optimizer_class_list[action]
+        optimizer = self.trained_optimizers[optimizer_class]
+
+        # (self.model.parameters())
+
+        # update the model and
+        # calculate the new objective value
         with torch.enable_grad():
-            self.model.zero_grad()
-            obj_value = self.obj_function(self.model)
+            obj_value = self.objective_function(self.model)
+            optimizer.zero_grad()
             obj_value.backward()
+            # update model parameters
+            optimizer.step()
+            # optimizer.zero_grad()
+        # add the updated optimizer into list
+        # self.trained_optimizers[optimizer_class] = optimizer.state_dict()
+
+        # print(opt_s)
 
         # Calculate the current gradient and flatten it
         current_grad = torch.cat(
@@ -104,9 +156,32 @@ class Environment(gym.Env):
             self.num_params,
             self.history_len,
         )
+        observation.flatten()
         reward = -obj_value.item()
         done = self.current_step >= self.num_steps
         info = {}
 
         self.current_step += 1
         return observation, reward, done, info
+
+
+def eval_handcrafted_optimizer(problem_list, optimizer_class, num_steps, do_init_weights=False):
+    """
+    Run an optimizer on a list of problems
+    """
+    rewards = []
+    for problem in problem_list:
+        model = copy.deepcopy(problem.model0)
+        if do_init_weights:
+            model.apply(init_weights)
+
+        optimizer = optimizer_class(model.parameters(), lr=0.01)
+        obj_values = []
+        for step in range(num_steps):
+            obj_value = problem.obj_function(model)
+            obj_values.append(-obj_value.detach().numpy())
+            optimizer.zero_grad()
+            obj_value.backward()
+            optimizer.step()
+        rewards.append(obj_values)
+    return np.array(rewards)
