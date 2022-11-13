@@ -15,7 +15,7 @@ def init_weights(m):
 class MLPProblemClass:
 
     def __init__(self):
-        num_vars = 2
+        num_vars = 4
 
         # Create four gaussian distributions with random mean and covariance
         gaussians = [
@@ -30,8 +30,8 @@ class MLPProblemClass:
         # Randomly assign each of the four gaussians a 0-1 label
         # Do again if all four gaussians have the same label (don't want that)
         gaussian_labels = np.zeros((4,))
-        while (gaussian_labels == 0).all() or (gaussian_labels == 1).all():
-            gaussian_labels = torch.randint(0, 2, size=(4,))
+        while (gaussian_labels == 0).all() or (gaussian_labels == 1).all() or (gaussian_labels == 2).all() or (gaussian_labels == 3).all():
+            gaussian_labels = torch.randint(0, 4, size=(4,))
 
         # Generate a dataset of 100 points with 25 points drawn from each gaussian
         # Label of the datapoint is the same as the label of the gaussian it came from
@@ -42,7 +42,7 @@ class MLPProblemClass:
         y = y[perm]
 
         self.model0 = nn.Sequential(
-            nn.Linear(num_vars, 2), nn.ReLU(), nn.Linear(2, 1), nn.Sigmoid()
+            nn.Linear(num_vars, 20), nn.ReLU(), nn.Linear(20, 1), nn.Sigmoid()
         )
 
         self.model0.apply(init_weights)

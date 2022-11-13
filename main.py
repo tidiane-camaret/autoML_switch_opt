@@ -1,5 +1,4 @@
 import os
-
 from problem import *
 import torch
 from environment import *
@@ -48,45 +47,49 @@ check_env(test_env, warn=True)
 
 # define the agent
 if config.policy.model == 'DQN':
-    policy = stable_baselines3.DQN('MlpPolicy', train_env, verbose=0, exploration_fraction=config.policy.exploration_fraction,
+    policy = stable_baselines3.DQN('MlpPolicy', train_env, verbose=0,
+                                   exploration_fraction=config.policy.exploration_fraction,
                                    tensorboard_log='tb_logs/norm')
 elif config.policy.model == 'PPO':
     policy = stable_baselines3.PPO('MlpPolicy', train_env, verbose=0,
                                    tensorboard_log='tb_logs/norm')
 else:
     print('policy is not selected, it is set DQN')
-    policy = stable_baselines3.DQN('MlpPolicy', train_env, verbose=0, exploration_fraction=config.policy.exploration_fraction,
+    policy = stable_baselines3.DQN('MlpPolicy', train_env, verbose=0,
+                                   exploration_fraction=config.policy.exploration_fraction,
                                    tensorboard_log='tb_logs/norm')
-actions, rewards = [], []
+actions, rewards, infos = [], [], []
 epochs = config.model.epochs
 for _ in range(epochs):
-    actions_, rewards_ = [], []
+    actions_, rewards_, infos_ = [], [], []
     test_env.reset()
     for _ in range(model_training_steps):
         action = test_env.action_space.sample()
-        obs, reward, _, _ = test_env.step(action)
+        obs, reward, _, info = test_env.step(action)
         actions_.append(action)
         rewards_.append(reward)
+        infos_.append(info['objective'])
     actions.append(actions_)
     rewards.append(rewards_)
+    infos.append(infos_)
 
-plt.plot(np.mean(rewards, axis=0), label='untrained', alpha=0.7)
-plt.fill_between(np.arange(len(rewards[0])), np.mean(rewards, axis=0) - np.std(rewards, axis=0),
-                 np.mean(rewards, axis=0) + np.std(rewards, axis=0), alpha=0.2)
+plt.plot(np.mean(infos, axis=0), label='untrained', alpha=0.7)
+plt.fill_between(np.arange(len(infos[0])), np.mean(infos, axis=0) - np.std(infos, axis=0),
+                 np.mean(infos, axis=0) + np.std(infos, axis=0), alpha=0.2)
 
 policy.learn(total_timesteps=agent_training_timesteps)
 
-trained_actions, trained_rewards = eval_agent(test_env, policy, num_episodes=10, num_steps=model_training_steps)
+trained_actions, trained_rewards, infos = eval_agent(test_env, policy, num_episodes=10, num_steps=model_training_steps)
 
-plt.plot(np.mean(trained_rewards, axis=0), label='trained', alpha=0.7)
-plt.fill_between(np.arange(len(trained_rewards[0])), np.mean(trained_rewards, axis=0) - np.std(trained_rewards, axis=0),
-                 np.mean(trained_rewards, axis=0) + np.std(trained_rewards, axis=0), alpha=0.2)
+plt.plot(np.mean(infos, axis=0), label='trained', alpha=0.7)
+plt.fill_between(np.arange(len(infos[0])), np.mean(infos, axis=0) - np.std(infos, axis=0),
+                 np.mean(infos, axis=0) + np.std(infos, axis=0), alpha=0.2)
 
 # evaluate the handcrafted optimizers
 rewards_sgd = eval_handcrafted_optimizer(test_problem_list, torch.optim.SGD, model_training_steps,
                                          do_init_weights=False, config=config)
 rewards_adam = eval_handcrafted_optimizer(test_problem_list, torch.optim.Adam, model_training_steps,
-                                          do_init_weights=False,config=config)
+                                          do_init_weights=False, config=config)
 rewards_rmsprop = eval_handcrafted_optimizer(test_problem_list, torch.optim.RMSprop, model_training_steps,
                                              do_init_weights=False, config=config)
 plt.plot(np.mean(rewards_sgd, axis=0), label="SGD", alpha=0.7, color='red', ls='--')
@@ -95,6 +98,9 @@ plt.plot(np.mean(rewards_rmsprop, axis=0), label="RMSprop", alpha=0.7, color='bl
 plt.legend()
 plt.show()
 print(trained_actions)
+for act in trained_actions:
+    for a in act:
+        print(optimizer_class_list[int(a)])
 plt.plot(np.mean(actions, axis=0), label='actions')
 plt.plot(np.mean(trained_actions, axis=0), label='trained_actions')
 plt.legend()

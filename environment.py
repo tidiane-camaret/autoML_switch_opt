@@ -38,7 +38,6 @@ class Environment(gym.Env):
             history_len,
             optimizer_class_list,
             do_init_weights=True,
-
     ):
 
         super().__init__()
@@ -50,6 +49,7 @@ class Environment(gym.Env):
         self.do_init_weights = do_init_weights
         self._setup_episode()
         self.num_params = sum(p.numel() for p in self.model.parameters())
+        self.old_reward = 0
 
         # Define action and observation space
         # Action space is the index of the optimizer class
@@ -73,6 +73,7 @@ class Environment(gym.Env):
         # print(problem, type(problem))
 
         self.model = copy.deepcopy(problem.model0)
+        self.old_model = copy.deepcopy(problem.model0)
         self.objective_function = problem.obj_function
         if self.do_init_weights:
             self.model.apply(init_weights)
@@ -110,9 +111,10 @@ class Environment(gym.Env):
             current_optimizer = self.trained_optimizers[opt_class]
             # optimizer.load_state_dict(self.trained_optimizers[opt_class]) #do we need this?
             with torch.enable_grad():
-                obj_value = self.objective_function(self.model)
+                obj_value = self.objective_function(self.old_model)
                 current_optimizer.zero_grad()
                 obj_value.backward()
+
             # add the updated optimizer into list
             self.trained_optimizers[opt_class] = current_optimizer
 
@@ -158,11 +160,13 @@ class Environment(gym.Env):
             self.history_len,
         )
         observation.flatten()
-        reward = -obj_value.item()
+        reward = (self.old_reward - obj_value.item())
+        self.old_reward = -obj_value.item()
         done = self.current_step >= self.num_steps
-        info = {}
+        info = {'objective': -obj_value.item()}
 
         self.current_step += 1
+        print('reward : ', reward)
         return observation, reward, done, info
 
 

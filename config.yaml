@@ -9,4 +9,4 @@ model:
 
 policy:
   model: 'DQN' # options:['DQN', 'PPO']
-  exploration_fraction : 0.1
+  exploration_fraction : 0.1 # only for DQN
