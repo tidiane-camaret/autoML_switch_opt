@@ -1,8 +1,8 @@
 import os
 
-from problem import *
+from problem import MLPProblemClass
 import torch
-from environment import *
+from environment import Environment, eval_handcrafted_optimizer
 import stable_baselines3
 from train_agent import eval_agent
 import numpy as np
