@@ -32,6 +32,7 @@ def make_observation(obj_value, obj_values, gradients, num_params, history_len):
 class Environment(gym.Env):
     def __init__(
             self,
+            config,
             problem_list,
             num_steps,
             history_len,
@@ -41,7 +42,7 @@ class Environment(gym.Env):
     ):
 
         super().__init__()
-
+        self.config = config
         self.problem_list = problem_list  # list of problems
         self.num_steps = num_steps  # number of maximum steps per problem
         self.history_len = history_len  # number of previous steps to keep in the observation
@@ -78,7 +79,7 @@ class Environment(gym.Env):
         self.trained_optimizers = dict.fromkeys(self.optimizer_class_list)
         for key, _ in self.trained_optimizers.items():
             # initialise the optimisers
-            optimizer_init = key(self.model.parameters(), lr=0.01)
+            optimizer_init = key(self.model.parameters(), lr=self.config.model.lr)
             self.trained_optimizers[key] = optimizer_init
 
         self.obj_values = []
@@ -165,7 +166,7 @@ class Environment(gym.Env):
         return observation, reward, done, info
 
 
-def eval_handcrafted_optimizer(problem_list, optimizer_class, num_steps, do_init_weights=False):
+def eval_handcrafted_optimizer(problem_list, optimizer_class, num_steps, config, do_init_weights=False):
     """
     Run an optimizer on a list of problems
     """
@@ -175,7 +176,7 @@ def eval_handcrafted_optimizer(problem_list, optimizer_class, num_steps, do_init
         if do_init_weights:
             model.apply(init_weights)
 
-        optimizer = optimizer_class(model.parameters(), lr=0.01)
+        optimizer = optimizer_class(model.parameters(), lr=config.model.lr)
         obj_values = []
         for step in range(num_steps):
             obj_value = problem.obj_function(model)
