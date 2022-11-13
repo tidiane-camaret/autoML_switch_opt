@@ -1,4 +1,10 @@
 tb_logs/
 *.pyc
-__pycache__/environment.cpython-310.pyc
-.spyproject/
+.idea/.gitignore
+.idea/autoML_switch_opt.iml
+.idea/misc.xml
+.idea/modules.xml
+.idea/vcs.xml
+.idea/inspectionProfiles/profiles_settings.xml
+.idea/inspectionProfiles/Project_Default.xml
+__pycache__/
