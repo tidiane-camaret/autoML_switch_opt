@@ -185,3 +185,32 @@ def eval_handcrafted_optimizer(problem_list, optimizer_class, num_steps, config,
             optimizer.step()
         rewards.append(obj_values)
     return np.array(rewards)
+
+def eval_switcher_optimizer(problem_list, optimizer_class_list, num_steps, config, switch_time=0.5, do_init_weights=False):
+    """
+    Run an optimizer on a list of problems
+    """
+    rewards = []
+    for problem in problem_list:
+        model = copy.deepcopy(problem.model0)
+        if do_init_weights:
+            model.apply(init_weights)
+
+        optimizer = optimizer_class_list[0](model.parameters(), lr=config.model.lr)
+        obj_values = []
+        for step in range(int(num_steps*switch_time)):
+            obj_value = problem.obj_function(model)
+            obj_values.append(-obj_value.detach().numpy())
+            optimizer.zero_grad()
+            obj_value.backward()
+            optimizer.step()
+
+        optimizer = optimizer_class_list[1](model.parameters(), lr=config.model.lr)
+        for step in range(int(num_steps*switch_time), num_steps):
+            obj_value = problem.obj_function(model)
+            obj_values.append(-obj_value.detach().numpy())
+            optimizer.zero_grad()
+            obj_value.backward()
+            optimizer.step()
+        rewards.append(obj_values)
+    return np.array(rewards)

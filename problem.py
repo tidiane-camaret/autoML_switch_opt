@@ -14,29 +14,46 @@ def init_weights(m):
 # define mlp_problem, but as a class
 class MLPProblemClass:
 
-    def __init__(self):
-        num_vars = 2
+    def __init__(self, 
+                num_vars=2,
+                num_gaussians=4,
+                num_samples=25,):
+
+        # generate list of random covariance matrices
+        covs = []
+        for _ in range(num_gaussians):
+            cov = torch.rand(num_vars, num_vars)
+            cov = torch.mm(cov, cov.t())
+            cov.add_(torch.eye(num_vars))
+            covs.append(cov)
+        trils = []
+        for _ in range(num_gaussians):
+            mat = torch.rand(num_vars, num_vars)
+            mat = mat + 2 * torch.diag_embed(torch.absolute(torch.diag(mat)))
+            tril = torch.tril(mat)
+            trils.append(tril)
 
         # Create four gaussian distributions with random mean and covariance
         gaussians = [
             torch.distributions.multivariate_normal.MultivariateNormal(
                 loc=torch.randn(num_vars),
-                covariance_matrix=torch.eye(num_vars) * torch.rand(1),
-                # scale_tril=torch.tril(torch.randn((num_vars, num_vars))),
+                #covariance_matrix=cov[i]
+                #covariance_matrix=torch.eye(num_vars) * torch.rand(1),
+                scale_tril=trils[i],
             )
-            for _ in range(4)
+            for i in range(num_gaussians)
         ]
 
         # Randomly assign each of the four gaussians a 0-1 label
         # Do again if all four gaussians have the same label (don't want that)
-        gaussian_labels = np.zeros((4,))
+        gaussian_labels = np.zeros((num_gaussians,))
         while (gaussian_labels == 0).all() or (gaussian_labels == 1).all():
-            gaussian_labels = torch.randint(0, 2, size=(4,))
+            gaussian_labels = torch.randint(0, 2, size=(num_gaussians,))
 
         # Generate a dataset of 100 points with 25 points drawn from each gaussian
         # Label of the datapoint is the same as the label of the gaussian it came from
-        x = torch.cat([g.sample((25,)) for g in gaussians])
-        y = torch.cat([torch.full((25,), float(label)) for label in gaussian_labels])
+        x = torch.cat([g.sample((num_samples,)) for g in gaussians])
+        y = torch.cat([torch.full((num_samples,), float(label)) for label in gaussian_labels])
         perm = torch.randperm(len(x))
         x = x[perm]
         y = y[perm]
