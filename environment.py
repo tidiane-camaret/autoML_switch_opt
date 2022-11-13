@@ -69,11 +69,18 @@ class Environment(gym.Env):
     # starting of a new episode
     def _setup_episode(self):
         problem = np.random.choice(self.problem_list)
+        #print(problem, type(problem))
+        
         self.model = copy.deepcopy(problem.model0)
-        self.objective_function = problem.obj_function  
+        self.objective_function = problem.obj_function
         if self.do_init_weights:       
             self.model.apply(init_weights)
         self.trained_optimizers = dict.fromkeys(self.optimizer_class_list)
+        for key, _ in self.trained_optimizers.items():
+            #initialise the optimisers
+            optimizer_init = key(self.model.parameters(), lr=0.01)
+            self.trained_optimizers[key] = optimizer_init
+            
 
         self.obj_values = []
         self.gradients = []
@@ -95,31 +102,41 @@ class Environment(gym.Env):
         # that we want to use on the next step
         # we calulate the new state and the reward
 
-        # define the optimizer
+        
+        
+        #update the parameters of all optimizers,
+        #this is to take care of information passing across optimizers of different classes
+        
+        for opt_class in self.optimizer_class_list:
+            #calculate the gradients for all optimizers
+            current_optimizer = self.trained_optimizers[opt_class]
+            #optimizer.load_state_dict(self.trained_optimizers[opt_class]) #do we need this?
+            with torch.enable_grad():
+                
+                obj_value = self.objective_function(self.model)
+                current_optimizer.zero_grad() 
+                obj_value.backward()
+            #add the updated optimizer into list
+            self.trained_optimizers[opt_class] = current_optimizer
+            
+        
+        # use the optimizer that the agent selected to update model params
         optimizer_class = self.optimizer_class_list[action]
-
-        optimizer = optimizer_class(self.model.parameters(), lr=0.01)
-
-             
-        if self.trained_optimizers[optimizer_class]:
-            #print("optimizer known")
-            #we have used it before, so we access it again
-            optimizer.load_state_dict(self.trained_optimizers[optimizer_class])
-
+        optimizer = self.trained_optimizers[optimizer_class]
         
         #(self.model.parameters())
         
         # update the model and 
         # calculate the new objective value
         with torch.enable_grad():
-            
             obj_value = self.objective_function(self.model)
             optimizer.zero_grad() 
             obj_value.backward()
+            #update model parameters
             optimizer.step()
             #optimizer.zero_grad()
         #add the updated optimizer into list
-        self.trained_optimizers[optimizer_class] = optimizer.state_dict()
+        #self.trained_optimizers[optimizer_class] = optimizer.state_dict()
 
         #print(opt_s)
 
@@ -145,6 +162,7 @@ class Environment(gym.Env):
             self.num_params,
             self.history_len,
         )
+        observation.flatten()
         reward = -obj_value.item()
         done = self.current_step >= self.num_steps
         info = {}
@@ -173,6 +191,9 @@ def eval_handcrafted_optimizer(problem_list, optimizer_class, num_steps, do_init
             optimizer.step()
         rewards.append(obj_values)
     return np.array(rewards)
+
+
+
 
 
 

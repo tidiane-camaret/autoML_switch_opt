@@ -22,9 +22,9 @@ def eval_agent(env, policy, num_episodes=1, num_steps=5):
     return actions, rewards
 
 # number of problems to train on
-num_problems = 1000
+num_problems = 100
 # number of agent training episodes
-num_agent_runs = 1000
+num_agent_runs = 100
 # number of steps in each episode
 model_training_steps = 100
 
@@ -34,7 +34,7 @@ train_problem_list = [MLPProblemClass() for _ in range(num_problems)]
 test_problem_list = [MLPProblemClass()]
 
 # optimizer classes
-optimizer_class_list=[torch.optim.SGD, torch.optim.Adam]
+optimizer_class_list=[torch.optim.SGD, torch.optim.Adam, torch.optim.RMSprop]
 history_len = 25
 
 # define the environment based on the problem list

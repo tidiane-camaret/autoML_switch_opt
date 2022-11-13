@@ -10,6 +10,7 @@ def init_weights(m):
         m.bias.data.fill_(0.01)
 
 def mlp_problem():
+    #print("here")
     num_vars = 2
 
     # Create four gaussian distributions with random mean and covariance
