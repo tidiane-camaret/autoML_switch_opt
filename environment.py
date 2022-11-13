@@ -4,7 +4,7 @@ import torch
 from gym import spaces
 import numpy as np
 from torch import nn
-
+from problem import Variable
 
 def init_weights(m):
     # initialize weights of the model m
@@ -169,22 +169,28 @@ def eval_handcrafted_optimizer(problem_list, optimizer_class, num_steps, config,
     """
     Run an optimizer on a list of problems
     """
-    rewards = []
+    obj_values = []
+    trajectories = []
     for problem in problem_list:
         model = copy.deepcopy(problem.model0)
         if do_init_weights:
             model.apply(init_weights)
 
         optimizer = optimizer_class(model.parameters(), lr=config.model.lr)
-        obj_values = []
+        o_v = []
+        t = []
         for step in range(num_steps):
+            # if model is a Variable instance, extract the parameter values
+            if isinstance(model, Variable):
+                t.append(copy.deepcopy(model).x.detach().numpy())
             obj_value = problem.obj_function(model)
-            obj_values.append(-obj_value.detach().numpy())
+            o_v.append(-obj_value.detach().numpy())
             optimizer.zero_grad()
             obj_value.backward()
             optimizer.step()
-        rewards.append(obj_values)
-    return np.array(rewards)
+        obj_values.append(o_v)
+        trajectories.append(t)
+    return np.array(obj_values), trajectories
 
 def eval_switcher_optimizer(problem_list, optimizer_class_list, num_steps, config, switch_time=0.5, do_init_weights=False):
     """
