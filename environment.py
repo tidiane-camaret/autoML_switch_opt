@@ -162,6 +162,7 @@ class Environment(gym.Env):
             self.num_params,
             self.history_len,
         )
+        #to supress the warning
         observation.flatten()
         reward = -obj_value.item()
         done = self.current_step >= self.num_steps

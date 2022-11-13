@@ -2,6 +2,7 @@ import torch
 from torch import nn
 import numpy as np 
 from torch.nn import functional as F
+import torchvision.datasets as datasets
 
 def init_weights(m): 
     # initialize weights of the model m 
@@ -50,7 +51,36 @@ def mlp_problem():
 
     return {"model0": model0, "obj_function": obj_function, "dataset": (x, y)}
 
+class MNISTProblemClass:
+    def __init__(self, 
+                 quantization_level=2,
+                 ):
+        
+        mnist_trainset = datasets.MNIST(root='./data', train=True, download=True, transform=None)
+        mnist_testset = datasets.MNIST(root='./data', train=False, download=True, transform=None)
+        
+        #maximum is 45 
+        
+        self.num_classes = 10
+        #choose from the number of classes two random ones
+        self.pair = np.random.choice(self.num_classes, 2)
+        
+        # Selecting the classes chosen 
+        idx = (mnist_trainset.targets==self.pair[0]) | (mnist_trainset.targets==self.pair[1]) 
+        mnist_trainset.targets = mnist_trainset.targets[idx]
+        mnist_trainset.data = mnist_trainset.data[idx]
+    
+        self.dataset = mnist_trainset
+        
+        
+        self.model0 = nn.Sequential(
+            nn.Linear(num_vars, 2), nn.ReLU(), nn.Linear(2, self.num_classes), nn.Sigmoid()
+        )
 
+        self.model0.apply(init_weights)
+
+        self.obj_function = self._obj_function
+        
 # define mlp_problem, but as a class
 class MLPProblemClass:
 
