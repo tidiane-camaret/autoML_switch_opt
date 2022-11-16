@@ -38,6 +38,7 @@ class Environment(gym.Env):
             history_len,
             optimizer_class_list,
             do_init_weights=True,
+
     ):
 
         super().__init__()
@@ -49,7 +50,7 @@ class Environment(gym.Env):
         self.do_init_weights = do_init_weights
         self._setup_episode()
         self.num_params = sum(p.numel() for p in self.model.parameters())
-        self.old_reward = 0
+        self.optimizer = torch.optim.Adam(self.model.parameters())
 
         # Define action and observation space
         # Action space is the index of the optimizer class
@@ -73,15 +74,14 @@ class Environment(gym.Env):
         # print(problem, type(problem))
 
         self.model = copy.deepcopy(problem.model0)
-        self.old_model = copy.deepcopy(problem.model0)
         self.objective_function = problem.obj_function
         if self.do_init_weights:
             self.model.apply(init_weights)
-        self.trained_optimizers = dict.fromkeys(self.optimizer_class_list)
-        for key, _ in self.trained_optimizers.items():
-            # initialise the optimisers
-            optimizer_init = key(self.model.parameters(), lr=self.config.model.lr)
-            self.trained_optimizers[key] = optimizer_init
+        # self.trained_optimizers = dict.fromkeys(self.optimizer_class_list)
+        # for key, _ in self.trained_optimizers.items():
+        #     # initialise the optimisers
+        #     optimizer_init = key(self.model.parameters(), lr=self.config.model.lr)
+        #     self.trained_optimizers[key] = optimizer_init
 
         self.obj_values = []
         self.gradients = []
@@ -105,22 +105,35 @@ class Environment(gym.Env):
 
         # update the parameters of all optimizers,
         # this is to take care of information passing across optimizers of different classes
+        print('action : ', action)
+       # current_optimizer = self.trained_optimizers[opt_class]
+#        print(self.optimizer_class_list.index(action))
+        if action == 0:
+            for param in self.optimizer.param_groups:
+                param['betas'] = (0.9, 0.999, 0.9, 0.999)
+            #    print('param_group[betas] : ', param['betas'])
+        if action == 1:
+            for param in self.optimizer.param_groups:
+                param['betas'] = (0.9, 1.0, 0.0, 0.0)
+            #    print('param_group[betas] : ', param['betas'])
 
-        for opt_class in self.optimizer_class_list:
-            # calculate the gradients for all optimizers
-            current_optimizer = self.trained_optimizers[opt_class]
+        if action == 2:
+            for param in self.optimizer.param_groups:
+                param['betas'] = (1.0, 0.999, 0.0, 0.0)
+
+
+
             # optimizer.load_state_dict(self.trained_optimizers[opt_class]) #do we need this?
             with torch.enable_grad():
-                obj_value = self.objective_function(self.old_model)
-                current_optimizer.zero_grad()
+                obj_value = self.objective_function(self.model)
+                self.optimizer.zero_grad()
                 obj_value.backward()
-
             # add the updated optimizer into list
-            self.trained_optimizers[opt_class] = current_optimizer
+           # self.trained_optimizers[opt_class] = current_optimizer
 
         # use the optimizer that the agent selected to update model params
-        optimizer_class = self.optimizer_class_list[action]
-        optimizer = self.trained_optimizers[optimizer_class]
+     #   optimizer_class = self.optimizer_class_list[action]
+    #    optimizer = self.trained_optimizers[optimizer_class]
 
         # (self.model.parameters())
 
@@ -128,10 +141,10 @@ class Environment(gym.Env):
         # calculate the new objective value
         with torch.enable_grad():
             obj_value = self.objective_function(self.model)
-            optimizer.zero_grad()
+            self.optimizer.zero_grad()
             obj_value.backward()
             # update model parameters
-            optimizer.step()
+            self.optimizer.step()
             # optimizer.zero_grad()
         # add the updated optimizer into list
         # self.trained_optimizers[optimizer_class] = optimizer.state_dict()
@@ -160,13 +173,11 @@ class Environment(gym.Env):
             self.history_len,
         )
         observation.flatten()
-        reward = (self.old_reward - obj_value.item())
-        self.old_reward = -obj_value.item()
+        reward = -obj_value.item()
         done = self.current_step >= self.num_steps
-        info = {'objective': -obj_value.item()}
+        info = {}
 
         self.current_step += 1
-        print('reward : ', reward)
         return observation, reward, done, info
 
 

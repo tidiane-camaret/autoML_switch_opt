@@ -5,6 +5,7 @@ model:
   history_len: 25
   epochs : 10
   lr : 0.01
+  optimizer_method : 'beta' #options: [beta, normal]
 
 
 policy:
