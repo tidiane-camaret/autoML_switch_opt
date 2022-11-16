@@ -1,9 +1,19 @@
+# import function from parent directory
+import sys
+sys.path.append('..')
+
 from problem import MLPProblemClass, RosenbrockProblemClass, SquareProblemClass
 from environment import eval_handcrafted_optimizer, eval_switcher_optimizer
 import torch
 from omegaconf import OmegaConf
 import numpy as np
 import matplotlib.pyplot as plt
+
+
+"""
+Evaluates the performance of several optimizers on a given list of problems.
+as well as the performance of a switcher optimizer.
+"""
 
 def first_index_below_threshold(array, threshold):
     """Return the first index of an array below a threshold. if none, return last index."""
@@ -14,7 +24,7 @@ def first_index_below_threshold(array, threshold):
 
 if __name__ == '__main__':
     
-    config = OmegaConf.load('config.yaml')
+    config = OmegaConf.load('../config.yaml')
     num_problems = 10
     num_steps = 100
     threshold = 0.001
@@ -22,22 +32,19 @@ if __name__ == '__main__':
     optimizer_class_list = [torch.optim.SGD,torch.optim.Adam]
 
     switch_times = np.arange(0, 1.2, 0.5)
+    starting_points = np.arange(-0.5, -0.25, 0.01)
 
-
-    problem_list = [
-        MLPProblemClass(
-                            #np.random.normal(loc=0.0, scale=10.0),
-                            #num_gaussians=30,
-                    )
-                            for i in range(num_problems)] 
+    problem_list = [SquareProblemClass(
+                    x0=x0
+                    ) for x0 in starting_points]
                 
 
     # plot mean loss curve for each optimizer
     for optimizer in optimizer_class_list:
         loss_curves, trajectories = eval_handcrafted_optimizer(problem_list, optimizer, num_steps, config, do_init_weights=False)
-        loss_curves = - loss_curves
-        mean_loss_curve = np.mean(loss_curves, axis=0)
-        plt.plot(mean_loss_curve, label=optimizer.__name__)
+        loss_curves = - loss_curves  
+        plt.plot(np.mean(loss_curves, axis=0), label=optimizer.__name__)
+        plt.fill_between(np.arange(num_steps), np.mean(loss_curves, axis=0) - np.std(loss_curves, axis=0), np.mean(loss_curves, axis=0) + np.std(loss_curves, axis=0), alpha=0.5)
 
     plt.legend()
     plt.show()

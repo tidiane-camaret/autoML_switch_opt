@@ -37,6 +37,7 @@ class Environment(gym.Env):
             history_len,
             optimizer_class_list,
             do_init_weights=True,
+            reward_function = lambda x: -x,
 
     ):
 
@@ -49,6 +50,7 @@ class Environment(gym.Env):
         self.do_init_weights = do_init_weights
         self._setup_episode()
         self.num_params = sum(p.numel() for p in self.model.parameters())
+        self.reward_function = reward_function
 
         # Define action and observation space
         # Action space is the index of the optimizer class
@@ -157,9 +159,11 @@ class Environment(gym.Env):
             self.history_len,
         )
         observation.flatten()
-        reward = -obj_value.item()
+
+        obj_value = obj_value.item()
+        reward = self.reward_function(obj_value)
         done = self.current_step >= self.num_steps
-        info = {}
+        info = {"obj_value" : obj_value}
 
         self.current_step += 1
         return observation, reward, done, info
@@ -184,7 +188,7 @@ def eval_handcrafted_optimizer(problem_list, optimizer_class, num_steps, config,
             if isinstance(model, Variable):
                 t.append(copy.deepcopy(model).x.detach().numpy())
             obj_value = problem.obj_function(model)
-            o_v.append(-obj_value.detach().numpy())
+            o_v.append(obj_value.detach().numpy())
             optimizer.zero_grad()
             obj_value.backward()
             optimizer.step()
@@ -206,7 +210,7 @@ def eval_switcher_optimizer(problem_list, optimizer_class_list, num_steps, confi
         obj_values = []
         for step in range(int(num_steps*switch_time)):
             obj_value = problem.obj_function(model)
-            obj_values.append(-obj_value.detach().numpy())
+            obj_values.append(obj_value.detach().numpy())
             optimizer.zero_grad()
             obj_value.backward()
             optimizer.step()
@@ -214,7 +218,7 @@ def eval_switcher_optimizer(problem_list, optimizer_class_list, num_steps, confi
         optimizer = optimizer_class_list[1](model.parameters(), lr=config.model.lr)
         for step in range(int(num_steps*switch_time), num_steps):
             obj_value = problem.obj_function(model)
-            obj_values.append(-obj_value.detach().numpy())
+            obj_values.append(obj_value.detach().numpy())
             optimizer.zero_grad()
             obj_value.backward()
             optimizer.step()

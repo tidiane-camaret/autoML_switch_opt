@@ -1,3 +1,7 @@
+# import function from parent directory
+import sys
+sys.path.append('..')
+
 from problem import MLPProblemClass, RosenbrockProblemClass, SquareProblemClass
 from omegaconf import OmegaConf
 import numpy as np
@@ -5,13 +9,16 @@ import matplotlib.pyplot as plt
 from environment import eval_handcrafted_optimizer, eval_switcher_optimizer
 import torch
 from problem_evaluation import first_index_below_threshold
+"""
+Visualizes the trajectories of the optimizers on a given list of problems.
+"""
 
-config = OmegaConf.load('config.yaml')
+config = OmegaConf.load('../config.yaml')
 num_problems = 10
 num_steps = 100
 optimizer_class_list = [torch.optim.SGD,torch.optim.Adam]
 threshold = 0.05
-switch_time = 0.5
+switch_time = 0.2
 starting_points = np.arange(-1, 1, 0.01)
 problem_list = [
     SquareProblemClass(
@@ -20,15 +27,14 @@ problem_list = [
                         for x0 in starting_points] 
 
 # plot the function of the first problem
-x = np.linspace(0.5, 1, 100)
-y = [problem_list[0].function_def(xi) for xi in x]
+#x = np.linspace(0.5, 1, 100)
+#y = [problem_list[0].function_def(xi) for xi in x]
 
 #plt.plot(x, y, alpha=0.5)   
 
 fibts = []
 for optimizer in optimizer_class_list:
     loss_curves, trajectories = eval_handcrafted_optimizer(problem_list, optimizer, num_steps, config, do_init_weights=False)
-    loss_curves = - loss_curves
 
     fibts.append(
         np.apply_along_axis(
@@ -38,14 +44,21 @@ for optimizer in optimizer_class_list:
 
     #plot the trajectory of the first problem
     #plt.plot(trajectories[0], loss_curves[0], label=optimizer.__name__, marker="o", markersize=5)
-    plt.plot(loss_curves[0], label=optimizer.__name__)
+    plt.plot(loss_curves[100], label=optimizer.__name__)
 
-loss_curves = - 1 * eval_switcher_optimizer(problem_list, 
+loss_curves = eval_switcher_optimizer(problem_list, 
                                             optimizer_class_list, 
                                             num_steps, 
                                             config, 
                                             switch_time, 
                                             do_init_weights=False)
+
+#plot curve of switcher optimizer
+plt.plot(loss_curves[100], label="switcher")
+
+
+plt.legend()
+plt.show()
 
 fibts.append(
     np.apply_along_axis(
