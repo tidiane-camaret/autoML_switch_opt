@@ -4,7 +4,7 @@ import torch
 from gym import spaces
 import numpy as np
 from torch import nn
-from problem import Variable
+
 
 def init_weights(m):
     # initialize weights of the model m
@@ -69,9 +69,12 @@ class Environment(gym.Env):
         # create a numpy array of trained optimizers, initially filled with nans
 
     # starting of a new episode
-    def _setup_episode(self):
-        problem = np.random.choice(self.problem_list)
-        # print(problem, type(problem))
+    def _setup_episode(self, problem=None):
+
+        if problem is None:
+            problem_index = np.random.randint(len(self.problem_list)) # randomly select a problem
+            problem = self.problem_list[problem_index]
+
 
         self.model = copy.deepcopy(problem.model0)
         self.objective_function = problem.obj_function
@@ -88,8 +91,8 @@ class Environment(gym.Env):
         self.current_step = 0
 
     # reset the environment when the episode is over
-    def reset(self):
-        self._setup_episode()
+    def reset(self, problem=None):
+        self._setup_episode(problem)
         return make_observation(
             None, self.obj_values, self.gradients, self.num_params, self.history_len
         )
@@ -169,58 +172,3 @@ class Environment(gym.Env):
         return observation, reward, done, info
 
 
-def eval_handcrafted_optimizer(problem_list, optimizer_class, num_steps, config, do_init_weights=False):
-    """
-    Run an optimizer on a list of problems
-    """
-    obj_values = []
-    trajectories = []
-    for problem in problem_list:
-        model = copy.deepcopy(problem.model0)
-        if do_init_weights:
-            model.apply(init_weights)
-
-        optimizer = optimizer_class(model.parameters(), lr=config.model.lr)
-        o_v = []
-        t = []
-        for step in range(num_steps):
-            # if model is a Variable instance, extract the parameter values
-            if isinstance(model, Variable):
-                t.append(copy.deepcopy(model).x.detach().numpy())
-            obj_value = problem.obj_function(model)
-            o_v.append(obj_value.detach().numpy())
-            optimizer.zero_grad()
-            obj_value.backward()
-            optimizer.step()
-        obj_values.append(o_v)
-        trajectories.append(t)
-    return np.array(obj_values), trajectories
-
-def eval_switcher_optimizer(problem_list, optimizer_class_list, num_steps, config, switch_time=0.5, do_init_weights=False):
-    """
-    Run an optimizer on a list of problems
-    """
-    rewards = []
-    for problem in problem_list:
-        model = copy.deepcopy(problem.model0)
-        if do_init_weights:
-            model.apply(init_weights)
-
-        optimizer = optimizer_class_list[0](model.parameters(), lr=config.model.lr)
-        obj_values = []
-        for step in range(int(num_steps*switch_time)):
-            obj_value = problem.obj_function(model)
-            obj_values.append(obj_value.detach().numpy())
-            optimizer.zero_grad()
-            obj_value.backward()
-            optimizer.step()
-
-        optimizer = optimizer_class_list[1](model.parameters(), lr=config.model.lr)
-        for step in range(int(num_steps*switch_time), num_steps):
-            obj_value = problem.obj_function(model)
-            obj_values.append(obj_value.detach().numpy())
-            optimizer.zero_grad()
-            obj_value.backward()
-            optimizer.step()
-        rewards.append(obj_values)
-    return np.array(rewards)
