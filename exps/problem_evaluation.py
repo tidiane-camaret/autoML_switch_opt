@@ -3,11 +3,12 @@ import sys
 sys.path.append('..')
 
 from problem import MLPProblemClass, RosenbrockProblemClass, SquareProblemClass
-from environment import eval_handcrafted_optimizer, eval_switcher_optimizer
+
 import torch
 from omegaconf import OmegaConf
 import numpy as np
 import matplotlib.pyplot as plt
+from train_agent import eval_agent, eval_handcrafted_optimizer, eval_switcher_optimizer, first_index_below_threshold
 
 
 """
@@ -15,12 +16,7 @@ Evaluates the performance of several optimizers on a given list of problems.
 as well as the performance of a switcher optimizer.
 """
 
-def first_index_below_threshold(array, threshold):
-    """Return the first index of an array below a threshold. if none, return last index."""
-    for i, x in enumerate(array):
-        if x < threshold:
-            return i
-    return len(array)-1
+
 
 if __name__ == '__main__':
     

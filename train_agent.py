@@ -80,3 +80,14 @@ def eval_switcher_optimizer(problem_list, optimizer_class_list, num_steps, confi
             optimizer.step()
         rewards.append(obj_values)
     return np.array(rewards)
+
+
+
+
+
+def first_index_below_threshold(array, threshold):
+    """Return the first index of an array below a threshold. if none, return last index."""
+    for i, x in enumerate(array):
+        if x < threshold:
+            return i
+    return len(array)-1

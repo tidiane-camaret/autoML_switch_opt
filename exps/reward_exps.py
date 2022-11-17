@@ -4,9 +4,9 @@ sys.path.append('..')
 
 from problem import MLPProblemClass, RosenbrockProblemClass, SquareProblemClass
 import torch
-from environment import Environment, eval_handcrafted_optimizer
+from environment import Environment
+from train_agent import  eval_agent, eval_handcrafted_optimizer
 import stable_baselines3
-from train_agent import eval_agent, eval_random_agent
 import numpy as np
 import matplotlib.pyplot as plt
 from stable_baselines3.common.env_checker import check_env
@@ -43,7 +43,7 @@ history_len = config.model.history_len
 
 
 threshold = 0.05
-reward_function = lambda x: 100 if x < threshold else -1
+reward_function = lambda x: 10 if x < threshold else -1
 
 # define the environment based on the problem list
 train_env = Environment(config=config,
@@ -81,7 +81,7 @@ else:
 actions, obj_values = [], []
 epochs = config.model.epochs
 
-policy.learn(total_timesteps=agent_training_timesteps)
+policy.learn(total_timesteps=agent_training_timesteps, progress_bar=True,)
 
 actions, obj_values = eval_agent(test_env, 
                                 policy, 
