@@ -4,7 +4,7 @@ import torch
 from gym import spaces
 import numpy as np
 from torch import nn
-
+import numpy as np
 
 def init_weights(m):
     # initialize weights of the model m
@@ -89,6 +89,7 @@ class Environment(gym.Env):
         self.obj_values = []
         self.gradients = []
         self.current_step = 0
+        self.obj_values_sum = 0
 
     # reset the environment when the episode is over
     def reset(self, problem=None):
@@ -161,11 +162,16 @@ class Environment(gym.Env):
             self.num_params,
             self.history_len,
         )
-        observation.flatten()
+
+        #observation = np.ndarray.flatten(observation)
+
 
         obj_value = obj_value.item()
+        self.obj_values_sum += obj_value
         reward = self.reward_function(obj_value)
+        
         done = self.current_step >= self.num_steps
+        #reward = - self.obj_values_sum if done else 0
         info = {"obj_value" : obj_value}
 
         self.current_step += 1
