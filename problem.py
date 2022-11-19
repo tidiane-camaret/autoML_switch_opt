@@ -79,7 +79,6 @@ class MLPProblemClass:
 
 # define rosenbrock problem as a class
 class RosenbrockProblemClass:
-
     def __init__(self,
                  x0=None,
                  num_vars=2,

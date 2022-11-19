@@ -1,11 +1,10 @@
 model:
   num_problems : 1000
   num_agent_runs : 1000
-  model_training_steps : 100
+  model_training_steps : 250
   history_len: 25
   epochs : 10
   lr : 0.01
-  optimizer_method : 'beta' #options: [beta, normal]
 
 
 policy:

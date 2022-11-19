@@ -19,16 +19,24 @@ num_agent_runs = config.model.num_agent_runs
 model_training_steps = config.model.model_training_steps
 
 agent_training_timesteps = num_agent_runs * model_training_steps
+
+
+
 # define the problem list
+
+# starting_points = np.arange(-0.5, -0.25, 0.01)
+# train_problem_list = [SquareProblemClass(
+#     x0=x0
+#     ) for x0 in starting_points]
+#
+# test_problem_list = [SquareProblemClass(x0=-0.4)]
+
 train_problem_list = [MLPProblemClass() for _ in range(num_problems)]
 test_problem_list = [MLPProblemClass()]
 
 # optimizer classes
-optimizer_class_list = [torch.optim.SGD, torch.optim.RMSprop, torch.optim.Adam]
-# optimizer1 = torch.optim.Adam(betas=(0.9, 0.999, 0.9, 0.999))
-# optimize2 = torch.optim.Adam(betas=(0.9, 1.0, 0.0, 0.0))
-# optimizer3 = torch.optim.Adam(betas=(1.0, 0.999, 0.0, 0.0))
-# optimizer_class_list = [optimizer1, optimize2, optimizer3]
+optimizer_class_list = [i for i in range(10)] #[torch.optim.SGD, torch.optim.RMSprop, torch.optim.Adam, torch.optim.Adam, torch.optim.Adam]
+
 history_len = config.model.history_len
 
 # define the environment based on the problem list
@@ -75,6 +83,7 @@ for _ in range(epochs):
         rewards_.append(reward)
     actions.append(actions_)
     rewards.append(rewards_)
+
 
 plt.plot(np.mean(rewards, axis=0), label='untrained', alpha=0.7)
 plt.fill_between(np.arange(len(rewards[0])), np.mean(rewards, axis=0) - np.std(rewards, axis=0),

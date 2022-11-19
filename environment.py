@@ -4,6 +4,7 @@ import torch
 from gym import spaces
 import numpy as np
 from torch import nn
+from modifedAdam import ModifiedAdam
 
 
 def init_weights(m):
@@ -50,7 +51,7 @@ class Environment(gym.Env):
         self.do_init_weights = do_init_weights
         self._setup_episode()
         self.num_params = sum(p.numel() for p in self.model.parameters())
-        self.optimizer = torch.optim.Adam(self.model.parameters())
+        self.optimizer = ModifiedAdam(self.model.parameters(), lr=config.model.lr)
 
         # Define action and observation space
         # Action space is the index of the optimizer class
@@ -69,9 +70,10 @@ class Environment(gym.Env):
         # create a numpy array of trained optimizers, initially filled with nans
 
     # starting of a new episode
-    def _setup_episode(self):
-        problem = np.random.choice(self.problem_list)
-        # print(problem, type(problem))
+    def _setup_episode(self, problem=None):
+        if problem is None:
+            problem_index = np.random.randint(len(self.problem_list))  # randomly select a problem
+            problem = self.problem_list[problem_index]
 
         self.model = copy.deepcopy(problem.model0)
         self.objective_function = problem.obj_function
@@ -86,10 +88,13 @@ class Environment(gym.Env):
         self.obj_values = []
         self.gradients = []
         self.current_step = 0
+        optimizer_init = torch.optim.Adam(self.model.parameters(),
+                                          lr=self.config.model.lr)  # torch.optim.RMSprop(self.model.parameters(),lr=self.config.model.lr)
+        self.optimizer = optimizer_init
 
     # reset the environment when the episode is over
-    def reset(self):
-        self._setup_episode()
+    def reset(self, problem=None):
+        self._setup_episode(problem)
         return make_observation(
             None, self.obj_values, self.gradients, self.num_params, self.history_len
         )
@@ -103,37 +108,43 @@ class Environment(gym.Env):
         # that we want to use on the next step
         # we calulate the new state and the reward
 
-        # update the parameters of all optimizers,
-        # this is to take care of information passing across optimizers of different classes
-        print('action : ', action)
-       # current_optimizer = self.trained_optimizers[opt_class]
-#        print(self.optimizer_class_list.index(action))
+        # if action == 0:
+        #     for param in self.optimizer.param_groups:
+        #         param['alpha'] = (0.995)
+        # if action == 1:
+        #     for param in self.optimizer.param_groups:
+        #         param['alpha'] = (0.990)
+        # if action == 2:
+        #     for param in self.optimizer.param_groups:
+        #         param['alpha'] = (0.985)
+        # if action == 3:
+        #     for param in self.optimizer.param_groups:
+        #         param['alpha'] = (0.980)
+        # if action == 4:
+        #     for param in self.optimizer.param_groups:
+        #         param['alpha'] = (0.975)
+
         if action == 0:
             for param in self.optimizer.param_groups:
-                param['betas'] = (0.9, 0.999, 0.9, 0.999)
-            #    print('param_group[betas] : ', param['betas'])
+                param['betas'] = (0.95, 0.999, 0, 0)
         if action == 1:
             for param in self.optimizer.param_groups:
-                param['betas'] = (0.9, 1.0, 0.0, 0.0)
-            #    print('param_group[betas] : ', param['betas'])
-
+                param['betas'] = (0.90, 0.999, 0, 0)  # (0.999, 0.999, 0.9, 0.999)
         if action == 2:
             for param in self.optimizer.param_groups:
-                param['betas'] = (1.0, 0.999, 0.0, 0.0)
+                param['betas'] = (0.85, 0.999, 0, 0)  # (0.9, 0.9, 0.9, 0.999)
+        if action == 3:
+            for param in self.optimizer.param_groups:
+                param['betas'] = (0.80, 0.999, 0, 0)  # (0.9, 0.9, 0.9, 0.999)
+        if action == 4:
+            for param in self.optimizer.param_groups:
+                param['betas'] = (0.75, 0.999, 0, 0)  # (0.9, 0.9, 0.9, 0.999)
 
-
-
-            # optimizer.load_state_dict(self.trained_optimizers[opt_class]) #do we need this?
-            with torch.enable_grad():
-                obj_value = self.objective_function(self.model)
-                self.optimizer.zero_grad()
-                obj_value.backward()
-            # add the updated optimizer into list
-           # self.trained_optimizers[opt_class] = current_optimizer
+        # self.trained_optimizers[opt_class] = current_optimizer
 
         # use the optimizer that the agent selected to update model params
-     #   optimizer_class = self.optimizer_class_list[action]
-    #    optimizer = self.trained_optimizers[optimizer_class]
+        #   optimizer_class = self.optimizer_class_list[action]
+        #    optimizer = self.trained_optimizers[optimizer_class]
 
         # (self.model.parameters())
 
