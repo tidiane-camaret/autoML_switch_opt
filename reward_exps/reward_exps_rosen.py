@@ -5,7 +5,7 @@ sys.path.append('..')
 from problem import MLPProblemClass, RosenbrockProblemClass, SquareProblemClass
 import torch
 from environment import Environment
-from train_agent import  eval_agent, eval_handcrafted_optimizer
+from eval_functions import  eval_agent, eval_handcrafted_optimizer
 import stable_baselines3
 import numpy as np
 import matplotlib.pyplot as plt
@@ -69,7 +69,7 @@ test_env = Environment(config=config,
 check_env(train_env, warn=True)
 check_env(test_env, warn=True)
 
-
+"""
 # define the agent
 if config.policy.model == 'DQN':
     policy = stable_baselines3.DQN('MlpPolicy', train_env, verbose=0, exploration_fraction=config.policy.exploration_fraction,
@@ -155,3 +155,5 @@ for training_seq in range(nb_training_seqs):
     plt.legend()
     plt.savefig("graphs/mean_trajectories"+str(training_seq)+".png")
     plt.clf()
+
+"""
