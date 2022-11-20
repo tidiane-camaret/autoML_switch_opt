@@ -12,11 +12,11 @@ from eval_functions import first_index_below_threshold
 from environment import Environment
 from stable_baselines3.common.env_checker import check_env
 import stable_baselines3
-xlim = 2
+xlim = 4
 
 
-nb_train_points = 200
-nb_test_points = nb_train_points
+nb_train_points = 1000
+nb_test_points = 100
 
 optimizer_class_list = [torch.optim.SGD,torch.optim.Adam]
 
@@ -30,9 +30,9 @@ history_len = config.model.history_len
 
 # generate list of random starting points
 starting_points = np.random.uniform(-xlim, xlim, size=(nb_train_points, 2))
-train_problem_list = [AckleyProblem(x0=xi) for xi in starting_points]
+train_problem_list = [GaussianHillsProblem(x0=xi) for xi in starting_points]
 starting_points = np.random.uniform(-xlim, xlim, size=(nb_test_points, 2))
-test_problem_list = [AckleyProblem(x0=xi) for xi in starting_points]
+test_problem_list = [GaussianHillsProblem(x0=xi) for xi in starting_points]
 
 
 
@@ -46,9 +46,10 @@ for optimizer in optimizer_class_list:
     # plot surface using starting points and fibt
     plt.scatter(starting_points[:,0], starting_points[:,1], c=loss_curves[:,-1], cmap='viridis')
     plt.colorbar()
-    plt.show()#plt.savefig(optimizer.__name__ + "_eval.png")
+    plt.show()
+    #plt.savefig(optimizer.__name__ + "_eval.png")
 
-    print(loss_curves[:,-1])
+    #print(loss_curves[:,-1])
     last_values.append(loss_curves[:,-1])
 
 loss_curves = eval_switcher_optimizer(test_problem_list, 
@@ -111,9 +112,10 @@ for i in range(nb_training_seqs):
     print("agent score: ", agent_score)
     agent_scores.append(agent_score)
 
+fig, ax = plt.subplots()
 # plot agent score over time
-plt.plot(agent_scores)
-plt.show()#savefig("agent_score.png")
+ax.plot(agent_scores)
+fig.show()#savefig("agent_score.png")
 
 
 
