@@ -91,8 +91,8 @@ for i in range(nb_training_seqs):
                                         num_steps=model_training_steps, 
                                         )
 
-    
-    all_last_values = last_values + trained_obj_values[:,-1]
+    #print(len(last_values))
+    all_last_values = last_values + [trained_obj_values[:,-1]]
     print(np.array(all_last_values).shape)
     best_optimizer = np.argmin(
         np.array(all_last_values), 
