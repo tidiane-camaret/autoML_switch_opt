@@ -1,6 +1,6 @@
 model:
   num_problems : 1000
-  num_agent_runs : 1000
+  num_agent_runs : 100
   model_training_steps : 100
   history_len: 5
   epochs : 10
