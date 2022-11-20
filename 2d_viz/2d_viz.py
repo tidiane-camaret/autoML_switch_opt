@@ -1,7 +1,7 @@
 import sys
 sys.path.append('..')
 from problem import NoisyHillsProblem, GaussianHillsProblem, RosenbrockProblem\
-    ,RastriginProblemClass, SquareProblemClass, AckleyProblemClass
+    ,RastriginProblem, SquareProblemClass, AckleyProblem
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import LogNorm
@@ -10,7 +10,7 @@ import torch
 
 # problem instance
 problem = RosenbrockProblem()
-problem = AckleyProblemClass()
+problem = AckleyProblem()
 #problem = NoisyHillsProblem()
 
 xlim = 1

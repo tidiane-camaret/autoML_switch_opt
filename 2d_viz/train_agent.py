@@ -34,7 +34,7 @@ history_len = config.model.history_len
 starting_points = np.random.uniform(-xlim, xlim, size=(nb_train_points, 2))
 train_problem_list = [GaussianHillsProblem(x0=xi) for xi in starting_points]
 starting_points = np.random.uniform(-xlim, xlim, size=(nb_test_points, 2))
-test_problem_list = [GaussianHillsProblem(x0=xi) for xi in starting_points]
+test_problem_list = [NoisyHillsProblem(x0=xi) for xi in starting_points]
 
 
 
@@ -66,7 +66,7 @@ for optimizer in optimizer_class_list:
     # plot surface using starting points and fibt
     plt.scatter(starting_points[:,0], starting_points[:,1], c=loss_curves[:,-1], cmap='viridis')
     plt.colorbar()
-    plt.savefig(optimizer.__name__ + "_eval.png")
+    plt.show()#plt.savefig(optimizer.__name__ + "_eval.png")
 
     print(loss_curves[:,-1])
     last_values.append(loss_curves[:,-1])
@@ -89,13 +89,14 @@ trained_actions, trained_obj_values = eval_agent(train_env,
 last_values.append(trained_obj_values[:,-1])
 
 best_optimizer = np.argmin(np.array(last_values), axis=0)
+print(best_optimizer)
 
 optimizer_name_list = [optimizer.__name__ for optimizer in optimizer_class_list] + ['switcher', 'agent']
 # plot best optimizer for each starting point, with legend
 for b in np.unique(best_optimizer):
     plt.scatter(starting_points[best_optimizer==b,0], starting_points[best_optimizer==b,1], label=optimizer_name_list[b])
 plt.legend()
-plt.savefig("best_opt.png")
+plt.show()#savefig("best_opt.png")
 
 
 
