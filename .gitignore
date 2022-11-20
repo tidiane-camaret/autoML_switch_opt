@@ -15,4 +15,5 @@ __pycache__/train_agent.cpython-310.pyc
 .idea/
 __pycache__/environment.cpython-310.pyc
 __pycache__/environment.cpython-310.pyc
-2d_viz/
+2d_viz/graphs/
+2d_viz/models/
