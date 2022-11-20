@@ -4,7 +4,7 @@ from problem import MLPProblemClass, RosenbrockProblemClass, SquareProblemClass
 import torch
 from environment import Environment, eval_handcrafted_optimizer
 import stable_baselines3
-from train_agent import eval_agent
+from eval_functions import eval_agent
 import numpy as np
 import matplotlib.pyplot as plt
 from stable_baselines3.common.env_checker import check_env
