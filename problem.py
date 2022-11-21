@@ -10,6 +10,12 @@ def init_weights(m):
         torch.nn.init.xavier_uniform_(m.weight)
         m.bias.data.fill_(0.01)
 
+class Variable(nn.Module):
+    """A wrapper to turn a tensor of parameters into a module for optimization."""
+    def __init__(self, data: torch.Tensor):
+        """Create Variable holding `data` tensor."""
+        super().__init__()
+        self.x = nn.Parameter(data)
 
 # define mlp_problem, but as a class
 class MLPProblemClass:

@@ -110,6 +110,7 @@ class Environment(gym.Env):
             # optimizer.load_state_dict(self.trained_optimizers[opt_class]) #do we need this?
             with torch.enable_grad():
                 obj_value = self.objective_function(self.model)
+                # obj_value
                 current_optimizer.zero_grad()
                 obj_value.backward()
             # add the updated optimizer into list
@@ -164,6 +165,26 @@ class Environment(gym.Env):
         self.current_step += 1
         return observation, reward, done, info
 
+def eval_handcrafted_optimizer(problem_list, optimizer_class, num_steps, config, do_init_weights=False):
+    """
+    Run an optimizer on a list of problems
+    """
+    rewards = []
+    for problem in problem_list:
+        model = copy.deepcopy(problem.model0)
+        if do_init_weights:
+            model.apply(init_weights)
+
+        optimizer = optimizer_class(model.parameters(), lr=config.model.lr)
+        obj_values = []
+        for step in range(num_steps):
+            obj_value = problem.obj_function(model)
+            obj_values.append(-obj_value.detach().numpy())
+            optimizer.zero_grad()
+            obj_value.backward()
+            optimizer.step()
+        rewards.append(obj_values)
+    return np.array(rewards)
 
 def eval_handcrafted_optimizer(problem_list, optimizer_class, num_steps, config, do_init_weights=False):
     """
