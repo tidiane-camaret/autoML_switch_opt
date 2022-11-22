@@ -32,7 +32,7 @@ nb_train_points = 1000
 nb_test_points = 100
 
 
-def train_and_eval_agent(problemclass1, problemclass2):
+def train_and_eval_agent(problemclass1, problemclass2, do_plot=True):
 
     train_starting_points = np.random.uniform(-xlim, xlim, size=(nb_train_points, 2))
     train_problem_list = [problemclass1(x0=xi) for xi in train_starting_points]
@@ -146,6 +146,29 @@ def train_and_eval_agent(problemclass1, problemclass2):
 
     best_optimizer_list = best_optimizer_list_threshold
 
+    # plot first index below threshold for best optimizer and agent, in ascending order
+    first_index_list = []
+    for i in range(nb_test_points):
+        obj_values = results[best_optimizer_list[i]]['obj_values']
+        first_index = first_index_below_threshold(obj_values[i], threshold)
+        first_index_list.append(first_index)
+    first_index_list = np.array(first_index_list)
+    sorted_indices = np.argsort(first_index_list)
+    first_index_list = first_index_list[sorted_indices]
+    best_optimizer_list = np.array(best_optimizer_list)[sorted_indices]
+
+    plt.figure()
+    plt.plot(first_index_list[best_optimizer_list == 'agent'], label='agent')
+    plt.plot(first_index_list[best_optimizer_list != 'agent'], label='best optimizer')
+    plt.legend()
+    plt.xlabel('starting point')
+    plt.ylabel('first index below threshold')
+    if do_plot:
+        plt.show()
+
+
+
+
     # plot the best optimizer for each starting point on the problem surface. 
 
     fig, ax = plt.subplots(1, 1, figsize=(10, 10))
@@ -169,7 +192,8 @@ def train_and_eval_agent(problemclass1, problemclass2):
         #ax.plot(trajectories[i][:, 0], trajectories[i][:, 1], 'o-', c='b', alpha=0.5, markersize=1)
     ax.legend()
     plt.savefig("visualization/graphs/best_opt.png")
-    plt.show()
+    if do_plot:
+        plt.show()
 
     #analyze the actions taken by the agent
     optimizer_name = "agent"
@@ -183,7 +207,8 @@ def train_and_eval_agent(problemclass1, problemclass2):
     plt.xlabel('step')
     plt.ylabel('starting point')
     plt.savefig("visualization/graphs/action_matrix.png")
-    plt.show()
+    if do_plot:
+        plt.show()
 
 
 
@@ -201,7 +226,8 @@ def train_and_eval_agent(problemclass1, problemclass2):
     cbar = plt.colorbar(sc)
     cbar.set_label('Mean action', rotation=270)
     plt.savefig("visualization/graphs/mean_agent_action.png")
-    plt.show()
+    if do_plot:
+        plt.show()
 
 
 
@@ -224,7 +250,8 @@ def train_and_eval_agent(problemclass1, problemclass2):
         axs[i].set_aspect('equal', 'box')
         '''
     plt.savefig("visualization/graphs/trajectories.png")
-    plt.show()
+    if do_plot:
+        plt.show()
 
     # count the number of times each optimizer is the best
     best_optimizer_count = {}
@@ -234,7 +261,7 @@ def train_and_eval_agent(problemclass1, problemclass2):
     return best_optimizer_count  
 
 if __name__ == "__main__":
-    problemclass1 = NoisyHillsProblem
+    problemclass1 = RastriginProblem
     problemclass2 = problemclass1
     best_optimizer_count = train_and_eval_agent(problemclass1, problemclass2)
     print("agent is best optimizer {} times".format(best_optimizer_count['agent']))
