@@ -234,7 +234,7 @@ def train_and_eval_agent(problemclass1, problemclass2):
     return best_optimizer_count  
 
 if __name__ == "__main__":
-    problemclass1 = GaussianHillsProblem
-    problemclass2 = GaussianHillsProblem
+    problemclass1 = NoisyHillsProblem
+    problemclass2 = problemclass1
     best_optimizer_count = train_and_eval_agent(problemclass1, problemclass2)
     print("agent is best optimizer {} times".format(best_optimizer_count['agent']))
