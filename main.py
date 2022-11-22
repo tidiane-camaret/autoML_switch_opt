@@ -1,8 +1,9 @@
 import os
 
-from problem import MLPProblemClass, RosenbrockProblemClass, SquareProblemClass
+from problem import MLPProblemClass, SquareProblemClass
 import torch
-from environment import Environment, eval_handcrafted_optimizer
+from environment import Environment
+from eval_functions import eval_agent, eval_handcrafted_optimizer, eval_switcher_optimizer, first_index_below_threshold
 import stable_baselines3
 from eval_functions import eval_agent
 import numpy as np
@@ -82,7 +83,7 @@ plt.fill_between(np.arange(len(rewards[0])), np.mean(rewards, axis=0) - np.std(r
 
 policy.learn(total_timesteps=agent_training_timesteps)
 
-trained_actions, trained_rewards = eval_agent(test_env, policy, num_episodes=100, num_steps=model_training_steps)
+trained_actions, trained_rewards = eval_agent(test_env, policy, num_steps=model_training_steps)
 
 plt.plot(np.mean(trained_rewards, axis=0), label='trained', alpha=0.7)
 plt.fill_between(np.arange(len(trained_rewards[0])), np.mean(trained_rewards, axis=0) - np.std(trained_rewards, axis=0),
