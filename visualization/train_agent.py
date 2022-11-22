@@ -15,15 +15,15 @@ import stable_baselines3
 xlim = 2
 
 
-nb_train_points = 100
-nb_test_points = 100
+nb_train_points = 3
+nb_test_points = 3
 
 num_steps = 100
 threshold = 0.001
 optimizer_class_list = [torch.optim.SGD,torch.optim.Adam]
 
 
-config = OmegaConf.load('../config.yaml')
+config = OmegaConf.load('config.yaml')
 num_agent_runs = config.model.num_agent_runs
 # number of steps in each episode
 model_training_steps = config.model.model_training_steps

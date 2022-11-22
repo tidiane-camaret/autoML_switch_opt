@@ -5,6 +5,7 @@ from gym import spaces
 import numpy as np
 from torch import nn
 import numpy as np
+from problem import Variable
 
 def init_weights(m):
     # initialize weights of the model m
@@ -130,6 +131,11 @@ class Environment(gym.Env):
         # update the model and
         # calculate the new objective value
         with torch.enable_grad():
+            # if the problem is a low dimensional problem, extract the current point
+            if isinstance(self.model, Variable):
+                traj_position = copy.deepcopy(self.model).x.detach().numpy()
+            else:
+                traj_position = None
             obj_value = self.objective_function(self.model)
             optimizer.zero_grad()
             obj_value.backward()
@@ -172,7 +178,8 @@ class Environment(gym.Env):
         
         done = self.current_step >= self.num_steps
         #reward = - self.obj_values_sum if done else 0
-        info = {"obj_value" : obj_value}
+        info = {"obj_value" : obj_value,
+                "traj_position" : traj_position}
 
         self.current_step += 1
         return observation, reward, done, info

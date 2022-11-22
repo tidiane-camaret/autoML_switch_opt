@@ -17,3 +17,5 @@ __pycache__/environment.cpython-310.pyc
 __pycache__/environment.cpython-310.pyc
 2d_viz/graphs/
 2d_viz/models/
+src.egg-info/
+visualization/graphs/

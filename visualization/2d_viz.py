@@ -1,5 +1,3 @@
-import sys
-sys.path.append('..')
 from problem import NoisyHillsProblem, GaussianHillsProblem, RosenbrockProblem\
     ,RastriginProblem, SquareProblemClass, AckleyProblem
 import matplotlib.pyplot as plt

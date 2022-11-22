@@ -8,9 +8,12 @@ def eval_agent(env, policy, problem_list = None, num_steps=5, random_actions=Fal
     if problem_list is None:
         problem_list = env.problem_list
 
-    actions, obj_values = np.zeros((len(problem_list), num_steps)), np.zeros((len(problem_list), num_steps))
+    actions = np.zeros((len(problem_list), num_steps))
+    obj_values = np.zeros((len(problem_list), num_steps))
+    trajectories = []
 
     for episode, problem in enumerate(problem_list):
+        t = []
         obs = env.reset(problem=problem)
         for step in range(num_steps):
             if random_actions:
@@ -20,12 +23,14 @@ def eval_agent(env, policy, problem_list = None, num_steps=5, random_actions=Fal
             obs, reward, done, info = env.step(action)
             actions[episode, step] = action
             obj_values[episode, step] = info["obj_value"]
+            t.append(info["traj_position"])
             if done:
                 break
-    return actions, obj_values
+        trajectories.append(t)
+    return obj_values, np.array(trajectories), actions
 
 
-def eval_handcrafted_optimizer(problem_list, optimizer_class, num_steps, config, do_init_weights=False):
+def eval_handcrafted_optimizer(problem_list, optimizer_class, num_steps, config, do_init_weights=False, optimizer_2_class=None, switch_time=None):
     """
     Run an optimizer on a list of problems
     """
@@ -35,11 +40,12 @@ def eval_handcrafted_optimizer(problem_list, optimizer_class, num_steps, config,
         model = copy.deepcopy(problem.model0)
         if do_init_weights:
             model.apply(init_weights)
-
-        optimizer = optimizer_class(model.parameters(), lr=config.model.lr)
         o_v = []
         t = []
+        optimizer = optimizer_class(model.parameters(), lr=config.model.lr)
         for step in range(num_steps):
+            if optimizer_2_class is not None and step == int(num_steps*switch_time):
+                optimizer = optimizer_2_class(model.parameters(), lr=config.model.lr)
             # if model is a Variable instance, extract the parameter values
             if isinstance(model, Variable):
                 t.append(copy.deepcopy(model).x.detach().numpy())
@@ -50,7 +56,7 @@ def eval_handcrafted_optimizer(problem_list, optimizer_class, num_steps, config,
             optimizer.step()
         obj_values.append(o_v)
         trajectories.append(t)
-    return np.array(obj_values), trajectories
+    return np.array(obj_values), np.array(trajectories)
 
 def eval_switcher_optimizer(problem_list, optimizer_class_list, num_steps, config, switch_time=0.5, do_init_weights=False):
     """
