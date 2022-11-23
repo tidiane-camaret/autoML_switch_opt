@@ -146,23 +146,25 @@ def train_and_eval_agent(problemclass1, problemclass2, do_plot=True):
 
     best_optimizer_list = best_optimizer_list_threshold
 
-    # plot first index below threshold for best optimizer and agent, in ascending order
-    first_index_list = []
+    # matrix of first index below threshold for each starting point and optimizer
+    first_index_below_threshold_matrix = np.zeros((nb_test_points, len(results.keys())))
     for i in range(nb_test_points):
-        obj_values = results[best_optimizer_list[i]]['obj_values']
-        first_index = first_index_below_threshold(obj_values[i], threshold)
-        first_index_list.append(first_index)
-    first_index_list = np.array(first_index_list)
-    sorted_indices = np.argsort(first_index_list)
-    first_index_list = first_index_list[sorted_indices]
-    best_optimizer_list = np.array(best_optimizer_list)[sorted_indices]
+        for j, optimizer_name in enumerate(results.keys()):
+            obj_values = results[optimizer_name]['obj_values']
+            first_index_below_threshold_matrix[i, j] = first_index_below_threshold(obj_values[i], threshold)
 
-    plt.figure()
-    plt.plot(first_index_list[best_optimizer_list == 'agent'], label='agent')
-    plt.plot(first_index_list[best_optimizer_list != 'agent'], label='best optimizer')
-    plt.legend()
-    plt.xlabel('starting point')
-    plt.ylabel('first index below threshold')
+    # sort matrix by agent first index below threshold
+    first_index_below_threshold_matrix = first_index_below_threshold_matrix[np.argsort(first_index_below_threshold_matrix[:, -1])]
+    
+    # plot matrix values as lines, sorted by best optimizer
+    fig, ax = plt.subplots(figsize=(10, 10))
+    for i, optimizer_name in enumerate(results.keys()):
+        ax.plot(first_index_below_threshold_matrix[:, i], label=optimizer_name)
+    ax.legend()
+    ax.set_xlabel('starting point')
+    ax.set_ylabel('first index below threshold')
+    ax.set_title('first index below threshold for each starting point and optimizer')
+    plt.savefig("visualization/graphs/fibt.png")
     if do_plot:
         plt.show()
 
