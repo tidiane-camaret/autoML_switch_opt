@@ -20,22 +20,30 @@ model_training_steps = config.model.model_training_steps
 
 agent_training_timesteps = num_agent_runs * model_training_steps
 
-
-
 # define the problem list
 
 # starting_points = np.arange(-0.5, -0.25, 0.01)
 # train_problem_list = [SquareProblemClass(
 #     x0=x0
 #     ) for x0 in starting_points]
-#
 # test_problem_list = [SquareProblemClass(x0=-0.4)]
+
+#
+#
+# train_problem_list = []
+# for i in range(config.model.num_problems):
+#     problem = AckleyProblem(x0=np.random.rand(2) * 0.5)
+#     train_problem_list.append(problem)
+# test_problem_list = [AckleyProblem(x0=[-2.3, 3.6])]
+
+
 
 train_problem_list = [MLPProblemClass() for _ in range(num_problems)]
 test_problem_list = [MLPProblemClass()]
 
 # optimizer classes
-optimizer_class_list = [i for i in range(10)] #[torch.optim.SGD, torch.optim.RMSprop, torch.optim.Adam, torch.optim.Adam, torch.optim.Adam]
+#optimizer_class_list = [i for i in range(50)]  # [torch.optim.SGD, torch.optim.RMSprop, torch.optim.Adam, torch.optim.Adam, torch.optim.Adam]
+
 
 history_len = config.model.history_len
 
@@ -44,13 +52,13 @@ train_env = Environment(config=config,
                         problem_list=train_problem_list,
                         num_steps=model_training_steps,
                         history_len=history_len,
-                        optimizer_class_list=optimizer_class_list
+                      #  optimizer_class_list=optimizer_class_list
                         )
 test_env = Environment(config=config,
                        problem_list=test_problem_list,
                        num_steps=model_training_steps,
                        history_len=history_len,
-                       optimizer_class_list=optimizer_class_list,
+                     #  optimizer_class_list=optimizer_class_list,
                        do_init_weights=False
                        )
 
@@ -84,14 +92,13 @@ for _ in range(epochs):
     actions.append(actions_)
     rewards.append(rewards_)
 
-
 plt.plot(np.mean(rewards, axis=0), label='untrained', alpha=0.7)
 plt.fill_between(np.arange(len(rewards[0])), np.mean(rewards, axis=0) - np.std(rewards, axis=0),
                  np.mean(rewards, axis=0) + np.std(rewards, axis=0), alpha=0.2)
 
 policy.learn(total_timesteps=agent_training_timesteps)
 
-trained_actions, trained_rewards = eval_agent(test_env, policy, num_episodes=10, num_steps=model_training_steps)
+trained_beta1, trained_beta2, trained_rewards = eval_agent(test_env, policy, num_episodes=10, num_steps=model_training_steps)
 
 plt.plot(np.mean(trained_rewards, axis=0), label='trained', alpha=0.7)
 plt.fill_between(np.arange(len(trained_rewards[0])), np.mean(trained_rewards, axis=0) - np.std(trained_rewards, axis=0),
@@ -109,29 +116,13 @@ plt.plot(np.mean(rewards_adam, axis=0), label="Adam", alpha=0.7, color='green', 
 plt.plot(np.mean(rewards_rmsprop, axis=0), label="RMSprop", alpha=0.7, color='blue', ls='--')
 plt.legend()
 plt.show()
-print(trained_actions)
-plt.plot(np.mean(actions, axis=0), label='actions')
-plt.plot(np.mean(trained_actions, axis=0), label='trained_actions')
+
+#plt.plot(np.mean(actions[0], axis=0), label='actions')
+plt.plot(np.mean(trained_beta1, axis=0), label='trained_actions')
 plt.legend()
 plt.show()
 
-# optimizer_class = self.optimizer_class_list[action]
-#     #  print(self.optimizer)
-#     if optimizer_class == torch.optim.Adam:
-#         beta1, beta2, beta3, beta4 = 0.9, 0.999, 0.9, 0.999
-#     elif optimizer_class == torch.optim.SGD:
-#         beta1, beta2, beta3, beta4 = 0.9, 1.0, 0.0, 0.0
-#     elif optimizer_class == torch.optim.RMSprop:
-#         beta1, beta2, beta3, beta4 = 1.0, 0.999, 0.0, 0.0
-#     self.optimizer = torch.optim.Adam(self.model.parameters(), betas=(beta1, beta2, beta3, beta4))
+plt.plot(np.mean(trained_beta2, axis=0), label='trained_actions')
+plt.legend()
+plt.show()
 
-
-# observation.flatten()
-# reward = (self.old_reward - obj_value.item())
-# self.old_reward = -obj_value.item()
-# done = self.current_step >= self.num_steps
-# info = {'objective': -obj_value.item()}
-#
-# self.current_step += 1
-# print('reward : ', reward)
-# return observation, reward, done, info

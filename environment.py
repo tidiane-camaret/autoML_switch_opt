@@ -37,9 +37,8 @@ class Environment(gym.Env):
             problem_list,
             num_steps,
             history_len,
-            optimizer_class_list,
+            #  optimizer_class_list,
             do_init_weights=True,
-
     ):
 
         super().__init__()
@@ -47,7 +46,7 @@ class Environment(gym.Env):
         self.problem_list = problem_list  # list of problems
         self.num_steps = num_steps  # number of maximum steps per problem
         self.history_len = history_len  # number of previous steps to keep in the observation
-        self.optimizer_class_list = optimizer_class_list
+        #   self.optimizer_class_list = optimizer_class_list
         self.do_init_weights = do_init_weights
         self._setup_episode()
         self.num_params = sum(p.numel() for p in self.model.parameters())
@@ -56,8 +55,9 @@ class Environment(gym.Env):
         # Define action and observation space
         # Action space is the index of the optimizer class
         # that we want to use on the next step
-        self.action_space = spaces.Discrete(len(self.optimizer_class_list))
-
+        self.action_space = spaces.Box(low=np.array([0.01, 0.998]), high=np.array([0.999, 0.999]), dtype=np.float32)
+        #spaces.Box(low=np.array([0.01, 0.01, 0.0, 0.0]), high=np.array([0.999, 0.999, 0.999, 0.999]), dtype=np.float32) #(action[0], 0.999, 0.0, 0.0)
+        # spaces.Discrete(len(self.optimizer_class_list))
         # Observation space is the history of
         # the objective values and gradients
 
@@ -103,10 +103,45 @@ class Environment(gym.Env):
     # and update the model
 
     def step(self, action):
+        print('Action is : ', action)
         # here, an action is given by the agent
         # it is the index of the optimizer class
         # that we want to use on the next step
         # we calulate the new state and the reward
+
+        for param in self.optimizer.param_groups:
+            param['betas'] = (action[0], action[1], 0, 0)  #
+
+        # if action == 0:
+        #     for param in self.optimizer.param_groups:
+        #         param['betas'] = (0.99, 0.999, 0.9, 0.999)  # (0.9, 0.999, 0.9, 0.999)
+        # if action == 1:
+        #     for param in self.optimizer.param_groups:
+        #         param['betas'] = (0.98, 0.999, 0.9, 0.999)
+        # if action == 2:
+        #     for param in self.optimizer.param_groups:
+        #         param['betas'] = (0.97, 0.999, 0.9, 0.999)
+        # if action == 3:
+        #     for param in self.optimizer.param_groups:
+        #         param['betas'] = (0.96, 0.999, 0.9, 0.999)
+        # if action == 4:
+        #     for param in self.optimizer.param_groups:
+        #         param['betas'] = (0.95, 0.999, 0.9, 0.999)
+        # if action == 5:
+        #     for param in self.optimizer.param_groups:
+        #         param['betas'] = (0.94, 0.999, 0.9, 0.999)
+        # if action == 6:
+        #     for param in self.optimizer.param_groups:
+        #         param['betas'] = (0.93, 0.999, 0.9, 0.999)
+        # if action == 7:
+        #     for param in self.optimizer.param_groups:
+        #         param['betas'] = (0.92, 0.999, 0.9, 0.999)
+        # if action == 8:
+        #     for param in self.optimizer.param_groups:
+        #         param['betas'] = (0.91, 0.999, 0.9, 0.999)
+        # if action == 9:
+        #     for param in self.optimizer.param_groups:
+        #         param['betas'] = (0.9, 0.999, 0.0, 0.999)
 
         # if action == 0:
         #     for param in self.optimizer.param_groups:
@@ -124,21 +159,36 @@ class Environment(gym.Env):
         #     for param in self.optimizer.param_groups:
         #         param['alpha'] = (0.975)
 
-        if action == 0:
-            for param in self.optimizer.param_groups:
-                param['betas'] = (0.95, 0.999, 0, 0)
-        if action == 1:
-            for param in self.optimizer.param_groups:
-                param['betas'] = (0.90, 0.999, 0, 0)  # (0.999, 0.999, 0.9, 0.999)
-        if action == 2:
-            for param in self.optimizer.param_groups:
-                param['betas'] = (0.85, 0.999, 0, 0)  # (0.9, 0.9, 0.9, 0.999)
-        if action == 3:
-            for param in self.optimizer.param_groups:
-                param['betas'] = (0.80, 0.999, 0, 0)  # (0.9, 0.9, 0.9, 0.999)
-        if action == 4:
-            for param in self.optimizer.param_groups:
-                param['betas'] = (0.75, 0.999, 0, 0)  # (0.9, 0.9, 0.9, 0.999)
+        # if action == 0:
+        #     for param in self.optimizer.param_groups:
+        #         param['betas'] = (0.99, 0.999, 0.01, 0.01)  # (0.9, 0.999, 0.9, 0.999)
+        # if action == 1:
+        #     for param in self.optimizer.param_groups:
+        #         param['betas'] = (0.99, 0.999, 0.02, 0.02)
+        # if action == 2:
+        #     for param in self.optimizer.param_groups:
+        #         param['betas'] = (0.99, 0.999, 0.03, 0.03)
+        # if action == 3:
+        #     for param in self.optimizer.param_groups:
+        #         param['betas'] = (0.99, 0.999, 0.04, 0.04)
+        # if action == 4:
+        #     for param in self.optimizer.param_groups:
+        #         param['betas'] = (0.99, 0.999, 0.05, 0.05)
+        # if action == 5:
+        #     for param in self.optimizer.param_groups:
+        #         param['betas'] = (0.99, 0.999, 0.06, 0.06)
+        # if action == 6:
+        #     for param in self.optimizer.param_groups:
+        #         param['betas'] = (0.99, 0.999, 0.07, 0.07)
+        # if action == 7:
+        #     for param in self.optimizer.param_groups:
+        #         param['betas'] = (0.99, 0.999, 0.08, 0.08)
+        # if action == 8:
+        #     for param in self.optimizer.param_groups:
+        #         param['betas'] = (0.99, 0.999, 0.09, 0.09)
+        # if action == 9:
+        #     for param in self.optimizer.param_groups:
+        #         param['betas'] = (0.99, 0.999, 0.1, 0.1)
 
         # self.trained_optimizers[opt_class] = current_optimizer
 

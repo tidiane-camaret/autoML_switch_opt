@@ -78,24 +78,29 @@ class MLPProblemClass:
 
 
 # define rosenbrock problem as a class
-class RosenbrockProblemClass:
+class RosenbrockProblem:
+
     def __init__(self,
                  x0=None,
                  num_vars=2,
                  ):
         if x0 is None:
-            x0 = torch.tensor([-1.5 if i % 2 == 0 else 1.5 for i in range(num_vars)])
+            x0 = torch.tensor([-1.5 if i % 2 == 0 else 1.5 for i in range(num_vars)], dtype=torch.float32,
+                              requires_grad=True)
         else:
-            x0 = torch.tensor(x0)
+            x0 = torch.tensor(x0, dtype=torch.float32, requires_grad=True)
 
         self.model0 = Variable(x0)
 
-    def function_def(self, x):
-        return torch.sum(100.0 * (x[1:] - x[:-1] ** 2.0) ** 2.0 + (1 - x[:-1]) ** 2.0)
+    # def function_def(self, x):
+    #    return torch.sum(100.0 * (x[1:] - x[:-1] ** 2.0) ** 2.0 + (1 - x[:-1]) ** 2.0)
+
+    def function_def(self, x, y):
+        return (1 - x) ** 2 + 100 * (y - x ** 2) ** 2
 
     def obj_function(self, model):
         x = model.x
-        return self.function_def(x)
+        return self.function_def(x[0], x[1])
 
 
 class SquareProblemClass:
@@ -117,3 +122,100 @@ class SquareProblemClass:
         x = model.x
         return self.function_def(x[0])
 
+
+class NoisyHillsProblem:
+
+    def __init__(self,
+                 x0=[0, 0],
+                 scale=1,
+                 center=1
+                 ):
+        x0 = torch.tensor(x0, dtype=torch.float32, requires_grad=True)
+        self.model0 = Variable(x0)
+        self.scale = scale
+        self.center = center
+
+    def function_def(self, x, y):
+        return -1 * torch.sin(x * x) * torch.cos(3 * y * y) * torch.exp(-(x * y) * (x * y)) - torch.exp(
+            -(x + y) * (x + y))
+
+    def obj_function(self, model):
+        x = model.x
+        return self.function_def(x[0], x[1])
+
+
+class RastriginProblem():
+
+    def __init__(self,
+                 x0=[0, 0],
+                 scale=1,
+                 center=1
+                 ):
+        x0 = torch.tensor(x0, dtype=torch.float32, requires_grad=True)
+        self.model0 = Variable(x0)
+        self.scale = scale
+        self.center = center
+
+    def function_def(self, x, y):
+        return 20 + x ** 2 - 10 * torch.cos(2 * np.pi * x) + y ** 2 - 10 * torch.cos(2 * np.pi * y)
+
+    def obj_function(self, model):
+        x = model.x
+        return self.function_def(x[0], x[1])
+
+
+class AckleyProblem():
+    def __init__(self,
+                 x0=[0, 0],
+                 scale=1,
+                 center=1
+                 ):
+        x0 = torch.tensor(x0, dtype=torch.float32, requires_grad=True)
+        self.model0 = Variable(x0)
+        self.scale = scale
+        self.center = center
+
+    def function_def(self, x, y):
+        return -20 * torch.exp(-0.2 * torch.sqrt(0.5 * (x ** 2 + y ** 2))) - torch.exp(
+            0.5 * (torch.cos(2 * torch.pi * x) + torch.cos(2 * torch.pi * y))) + np.exp(1) + 20
+
+    def obj_function(self, model):
+        x = model.x
+        return self.function_def(x[0], x[1])
+
+
+class GaussianHillsProblem:
+
+    def __init__(self,
+                 x0=[0, 0],
+                 scale=1,
+                 center=1
+                 ):
+        x0 = torch.tensor(x0, dtype=torch.float32, requires_grad=True)
+        self.model0 = Variable(x0)
+        self.scale = scale
+        self.center = center
+
+    def fd(self, x, y, x_mean, y_mean, x_sig, y_sig):
+        normalizing = 1 / (2 * torch.pi * x_sig * y_sig)
+        x_exp = (-1 * (x - x_mean) ** 2) / (2 * (x_sig) ** 2)
+        y_exp = (-1 * (y - y_mean) ** 2) / (2 * (y_sig) ** 2)
+        return normalizing * torch.exp(x_exp + y_exp)
+
+    def function_def(self, x, y):
+        # 3rd local minimum at (-0.5, -0.8)
+        z = -1 * self.fd(x, y, x_mean=-0.5, y_mean=-0.8, x_sig=0.35, y_sig=0.35)
+
+        # one steep gaussian trench at (0, 0)
+        #     z -= __f2(x, y, x_mean=0, y_mean=0, x_sig=0.2, y_sig=0.2)
+
+        # three steep gaussian trenches
+        z -= self.fd(x, y, x_mean=1.0, y_mean=-0.5, x_sig=0.2, y_sig=0.2)
+        z -= self.fd(x, y, x_mean=-1.0, y_mean=0.5, x_sig=0.2, y_sig=0.2)
+        z -= self.fd(x, y, x_mean=-0.5, y_mean=-0.8, x_sig=0.2, y_sig=0.2)
+
+        return z
+
+    def obj_function(self, model):
+        x = model.x
+        return self.function_def(x[0], x[1])
