@@ -8,7 +8,7 @@ tb_logs/
 .idea/inspectionProfiles/profiles_settings.xml
 .idea/inspectionProfiles/Project_Default.xml
 __pycache__/
-__pycache__/environment.cpython-310.pyc
+__pycache__/*
 __pycache__/problem.cpython-310.pyc
 __pycache__/train_agent.cpython-310.pyc
 .spyproject/
@@ -19,3 +19,4 @@ __pycache__/environment.cpython-310.pyc
 2d_viz/models/
 src.egg-info/
 visualization/graphs/
+*.pkl

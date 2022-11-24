@@ -81,11 +81,14 @@ class Environment(gym.Env):
         self.objective_function = problem.obj_function
         if self.do_init_weights:
             self.model.apply(init_weights)
+
         self.trained_optimizers = dict.fromkeys(self.optimizer_class_list)
+        self.trained_optimizers_states = dict.fromkeys(self.optimizer_class_list)
         for key, _ in self.trained_optimizers.items():
             # initialise the optimisers
             optimizer_init = key(self.model.parameters(), lr=self.config.model.lr)
             self.trained_optimizers[key] = optimizer_init
+            self.trained_optimizers_states[key] = optimizer_init.state_dict()
 
         self.obj_values = []
         self.gradients = []
@@ -111,17 +114,35 @@ class Environment(gym.Env):
         # update the parameters of all optimizers,
         # this is to take care of information passing across optimizers of different classes
 
+        handcrafted_obj_values = []
+        k = 1
         for opt_class in self.optimizer_class_list:
+            model_decoy = copy.deepcopy(self.model)
             # calculate the gradients for all optimizers
-            current_optimizer = self.trained_optimizers[opt_class]
-            # optimizer.load_state_dict(self.trained_optimizers[opt_class]) #do we need this?
+            #current_optimizer = self.trained_optimizers[opt_class]
+
+            current_optimizer = opt_class(model_decoy.parameters(), lr=self.config.model.lr)
+            current_optimizer.load_state_dict(self.trained_optimizers_states[opt_class]) #do we need this?
+            
             with torch.enable_grad():
-                obj_value = self.objective_function(self.model)
+                obj_value = self.objective_function(model_decoy)
                 current_optimizer.zero_grad()
                 obj_value.backward()
+                current_optimizer.step()
             # add the updated optimizer into list
-            self.trained_optimizers[opt_class] = current_optimizer
 
+            #self.trained_optimizers[opt_class] = current_optimizer
+            self.trained_optimizers_states[opt_class] = current_optimizer.state_dict()
+            
+            for i in range(k):
+                obj_value = self.objective_function(model_decoy)
+                current_optimizer.zero_grad()
+                obj_value.backward()
+                current_optimizer.step()
+            handcrafted_obj_values.append(obj_value.item())
+
+        #print(handcrafted_obj_values)
+        #print(np.argmin(handcrafted_obj_values))
         # use the optimizer that the agent selected to update model params
         optimizer_class = self.optimizer_class_list[action]
         optimizer = self.trained_optimizers[optimizer_class]
@@ -174,10 +195,12 @@ class Environment(gym.Env):
 
         obj_value = obj_value.item()
         self.obj_values_sum += obj_value
-        reward = self.reward_function(obj_value)
+
+        reward = 1 if action == np.argmin(handcrafted_obj_values) else 0
+        #reward = self.reward_function(obj_value)
         
         done = self.current_step >= self.num_steps
-        #reward = - self.obj_values_sum if done else 0
+
         info = {"obj_value" : obj_value,
                 "traj_position" : traj_position}
 

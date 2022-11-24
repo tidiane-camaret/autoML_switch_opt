@@ -1,5 +1,5 @@
 from problem import NoisyHillsProblem, GaussianHillsProblem, RosenbrockProblem\
-    ,RastriginProblem, SquareProblemClass, AckleyProblem
+    ,RastriginProblem, SquareProblemClass, AckleyProblem, NormProblem
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import LogNorm
@@ -7,18 +7,19 @@ from eval_functions import eval_agent, eval_handcrafted_optimizer, eval_switcher
 import torch 
 
 # problem instance
-problem = RosenbrockProblem()
-problem = AckleyProblem()
+problem = NormProblem
 #problem = NoisyHillsProblem()
 
-xlim = 1
+xlim = 2
 # plot the function
 x = np.arange(-xlim, xlim, 0.1)
 y = np.arange(-xlim, xlim, 0.1)
 X, Y = np.meshgrid(x, y)
 X, Y = torch.tensor(X), torch.tensor(Y)
-Z = problem.function_def(X, Y)
+Z = problem().function_def(X, Y)
 Z = Z.detach().numpy()
+
+
 plt.contourf(X, Y, Z)
 plt.colorbar()
 plt.show()

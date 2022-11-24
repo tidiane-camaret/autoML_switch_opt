@@ -205,17 +205,17 @@ class GaussianHillsProblem:
         return normalizing * torch.exp(x_exp + y_exp)
 
     def function_def(self, x, y):
-                # 3rd local minimum at (-0.5, -0.8)
-        z = -1 * self.fd(x, y, x_mean=-0.5, y_mean=-0.8, x_sig=0.35, y_sig=0.35)
+        z = -1 * self.fd(x, y, x_mean=0.5, y_mean=0.8, x_sig=0.8, y_sig=0.8)
+        #z -= self.fd(x, y, x_mean=0.5, y_mean=0.8, x_sig=0.2, y_sig=0.35)
+        #z = -1 * self.fd(x, y, x_mean=-0.5, y_mean=-0.8, x_sig=0.35, y_sig=0.35)
 
-        # one steep gaussian trench at (0, 0)
-    #     z -= __f2(x, y, x_mean=0, y_mean=0, x_sig=0.2, y_sig=0.2)
 
+        """
         # three steep gaussian trenches
-        z -= self.fd(x, y, x_mean=1.0, y_mean=-0.5, x_sig=0.2, y_sig=0.2)
+        z -= self.fd(x, y, x_mean=1.0, y_mean=-0.5, x_sig=0.1, y_sig=0.5)
         z -= self.fd(x, y, x_mean=-1.0, y_mean=0.5, x_sig=0.2, y_sig=0.2)
         z -= self.fd(x, y, x_mean=-0.5, y_mean=-0.8, x_sig=0.2, y_sig=0.2)
-
+        """
         return z
 
 
@@ -223,3 +223,41 @@ class GaussianHillsProblem:
         x = model.x
         return self.function_def(x[0],x[1])
 
+class NormProblem:
+
+    def __init__(self, 
+            x0=[0,0],
+            scale=1,
+            center=1
+            ):
+
+        x0 = torch.tensor(x0, dtype=torch.float32, requires_grad=True)
+        self.model0 = Variable(x0)
+        self.scale = scale
+        self.center = center
+
+    def function_def(self, x, y):
+        return torch.sqrt(x**2 + (1.1*y)**2)
+    def obj_function(self, model):
+        x = model.x
+        return self.function_def(x[0],x[1])
+
+class YNormProblem:
+
+    def __init__(self, 
+            x0=[0,0],
+            scale=1,
+            center=1
+            ):
+
+        x0 = torch.tensor(x0, dtype=torch.float32, requires_grad=True)
+        self.model0 = Variable(x0)
+        self.scale = scale
+        self.center = center
+
+    def function_def(self, x, y):
+        return torch.sqrt(y**2) * 10
+
+    def obj_function(self, model):
+        x = model.x
+        return self.function_def(x[0],x[1])

@@ -4,7 +4,8 @@ extract the rewart, action and trajectory for each optimizer
 """
 
 from problem import NoisyHillsProblem, GaussianHillsProblem, RosenbrockProblem\
-    ,RastriginProblem, SquareProblemClass, AckleyProblem
+    ,RastriginProblem, SquareProblemClass, AckleyProblem, NormProblem, \
+        YNormProblem
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import LogNorm
@@ -215,21 +216,16 @@ def train_and_eval_agent(problemclass1, problemclass2, do_plot=True):
 
 
 
-    # on the problem surface, plot mean agent action for each starting point
+    # on the problem surface, plot agent actions for each starting point
     fig, ax = plt.subplots(1, 1, figsize=(10, 10))
-    ax.contourf(X, Y, Z, 50,cmap='Greys')
-    ax.set_title('Mean agent action for each starting point')
+    ax.contourf(X, Y, Z, 50,)
+    ax.set_title('Agent actions for each starting point')
     ax.set_xlabel('x')
     ax.set_ylabel('y')
+    for i in range(nb_test_points):
+        ax.scatter(trajectories[i][:, 0], trajectories[i][:, 1], c=actions[i,:])
+    plt.savefig("visualization/graphs/agent_actions.png")
 
-    sc = ax.scatter(test_starting_points[:, 0], test_starting_points[:, 1], c=np.mean(actions, axis=1), label='starting points')
-    ax.legend()
-    # add colorbar
-    cbar = plt.colorbar(sc)
-    cbar.set_label('Mean action', rotation=270)
-    plt.savefig("visualization/graphs/mean_agent_action.png")
-    if do_plot:
-        plt.show()
 
 
 
@@ -263,7 +259,7 @@ def train_and_eval_agent(problemclass1, problemclass2, do_plot=True):
     return best_optimizer_count  
 
 if __name__ == "__main__":
-    problemclass1 = RastriginProblem
+    problemclass1 = NormProblem
     problemclass2 = problemclass1
     best_optimizer_count = train_and_eval_agent(problemclass1, problemclass2)
     print("agent is best optimizer {} times".format(best_optimizer_count['agent']))
