@@ -142,7 +142,7 @@ class Environment(gym.Env):
             handcrafted_obj_values.append(obj_value.item())
 
         #print(handcrafted_obj_values)
-        #print(np.argmin(handcrafted_obj_values))
+        print(np.argmin(handcrafted_obj_values))
         # use the optimizer that the agent selected to update model params
         optimizer_class = self.optimizer_class_list[action]
         optimizer = self.trained_optimizers[optimizer_class]

@@ -2,7 +2,7 @@
 evaluate an handcrafted and an agent based optimizer on a given problem list
 extract the rewart, action and trajectory for each optimizer
 """
-
+import os, pickle
 from problem import NoisyHillsProblem, GaussianHillsProblem, RosenbrockProblem\
     ,RastriginProblem, SquareProblemClass, AckleyProblem, NormProblem, \
         YNormProblem
@@ -117,50 +117,47 @@ def train_and_eval_agent(problemclass1, problemclass2, do_plot=True):
     results[optimizer_name]['trajectories'] = trajectories
     results[optimizer_name]['actions'] = actions
 
+    params_dict = {
+        'test_starting_points': test_starting_points,
+        'threshold': threshold,
+        'meshgrid': (X, Y, Z),
 
+    }
+
+    return results, params_dict
+
+def agent_statistics(results, params_dict, do_plot=True):
+    
+    test_starting_points = params_dict['test_starting_points']
+    threshold = params_dict['threshold']
+    X, Y, Z = params_dict['meshgrid']
+    
     #### DISPLAY RESULTS ####
 
-    # for each starting point, define best optimizer as the one with the lowest final objective value
-    best_optimizer_list_last_val = []
-    for i in range(nb_test_points):
-        best_optimizer = None
-        best_obj_value = np.inf
-        for optimizer_name in results.keys():
-            obj_values = results[optimizer_name]['obj_values']
-            if obj_values[i][-1] < best_obj_value:
-                best_obj_value = obj_values[i][-1]
-                best_optimizer = optimizer_name
-        best_optimizer_list_last_val.append(best_optimizer)
-
-    # for each starting point, define best optimizer as the one reaching the threshold first
-    best_optimizer_list_threshold = []
-    for i in range(nb_test_points):
-        best_optimizer = None
-        best_obj_value = np.inf
-        for optimizer_name in results.keys():
-            obj_values = results[optimizer_name]['obj_values']
-            first_index = first_index_below_threshold(obj_values[i], threshold)
-            if first_index < best_obj_value:
-                best_obj_value = first_index
-                best_optimizer = optimizer_name
-        best_optimizer_list_threshold.append(best_optimizer)
-
-    best_optimizer_list = best_optimizer_list_threshold
-
-    # matrix of first index below threshold for each starting point and optimizer
-    first_index_below_threshold_matrix = np.zeros((nb_test_points, len(results.keys())))
+    # calculate a score matrix storing the mean objective value for each optimizer
+    score_matrix = np.zeros((nb_test_points, len(results.keys())))
     for i in range(nb_test_points):
         for j, optimizer_name in enumerate(results.keys()):
             obj_values = results[optimizer_name]['obj_values']
-            first_index_below_threshold_matrix[i, j] = first_index_below_threshold(obj_values[i], threshold)
+            #score_matrix[i, j] = first_index_below_threshold(obj_values[i], threshold)
+            score_matrix[i, j] = np.mean(obj_values[i][10:])
 
-    # sort matrix by agent first index below threshold
-    first_index_below_threshold_matrix = first_index_below_threshold_matrix[np.argsort(first_index_below_threshold_matrix[:, -1])]
-    
+    # list of best optimizers for each starting point. if the agent is in a tie with a handcrafted optimizer, the agent wins
+    best_optimizer_list = []
+    for i in range(nb_test_points):
+        best_score = np.inf
+        best_optimizer = "agent"
+        for j, optimizer_name in enumerate(results.keys()):
+            if score_matrix[i, j] < best_score:
+                best_score = score_matrix[i, j]
+                best_optimizer = optimizer_name
+        best_optimizer_list.append(best_optimizer)
+
     # plot matrix values as lines, sorted by best optimizer
+    score_matrix_sorted = score_matrix[score_matrix[:, -1].argsort()]
     fig, ax = plt.subplots(figsize=(10, 10))
     for i, optimizer_name in enumerate(results.keys()):
-        ax.plot(first_index_below_threshold_matrix[:, i], label=optimizer_name)
+        ax.plot(score_matrix_sorted[:, i], label=optimizer_name)
     ax.legend()
     ax.set_xlabel('starting point')
     ax.set_ylabel('first index below threshold')
@@ -225,12 +222,13 @@ def train_and_eval_agent(problemclass1, problemclass2, do_plot=True):
     for i in range(nb_test_points):
         ax.scatter(trajectories[i][:, 0], trajectories[i][:, 1], c=actions[i,:])
     plt.savefig("visualization/graphs/agent_actions.png")
+    if do_plot:
+        plt.show()
 
-
-
-
+    optimizer_names = list(results.keys())  
+    """
     # display result trajectories of each optimizer in a separate subplot
-    optimizer_names = list(results.keys())
+    
     fig, axs = plt.subplots(1, len(optimizer_names), figsize=(15, 5))
     for i, optimizer_name in enumerate(optimizer_names):
         trajectories = results[optimizer_name]['trajectories']
@@ -241,15 +239,11 @@ def train_and_eval_agent(problemclass1, problemclass2, do_plot=True):
         axs[i].legend()
         axs[i].contourf(X, Y, Z)
 
-        '''
-        axs[i].set_xlim(-xlim, xlim)
-        axs[i].set_ylim(-xlim, xlim)
-        axs[i].contour(X, Y, Z, 20, cmap='RdGy', norm=LogNorm(vmin=1.0, vmax=1000.0))
-        axs[i].set_aspect('equal', 'box')
-        '''
+
     plt.savefig("visualization/graphs/trajectories.png")
     if do_plot:
         plt.show()
+    """
 
     # count the number of times each optimizer is the best
     best_optimizer_count = {}
@@ -259,7 +253,25 @@ def train_and_eval_agent(problemclass1, problemclass2, do_plot=True):
     return best_optimizer_count  
 
 if __name__ == "__main__":
-    problemclass1 = NormProblem
+
+    problemclass1 = YNormProblem
     problemclass2 = problemclass1
-    best_optimizer_count = train_and_eval_agent(problemclass1, problemclass2)
-    print("agent is best optimizer {} times".format(best_optimizer_count['agent']))
+
+    filename = "visualization/graphs/"\
+                + problemclass1.__name__\
+                + "_" + problemclass2.__name__\
+                + "_results.pkl"
+
+    #if file already exists, load it
+    if os.path.isfile(filename):
+        with open(filename, 'rb') as f:
+            results, params_dict = pickle.load(f)
+
+    #else, run the experiment and save the results
+    else:
+        results, params_dict = train_and_eval_agent(problemclass1, problemclass2)
+        with open(filename, 'wb') as f:
+            pickle.dump((results, params_dict), f)
+
+    best_optimizer_count = agent_statistics(results, params_dict, do_plot=True)
+    print(best_optimizer_count)
