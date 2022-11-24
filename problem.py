@@ -205,17 +205,15 @@ class GaussianHillsProblem:
         return normalizing * torch.exp(x_exp + y_exp)
 
     def function_def(self, x, y):
-        z = -1 * self.fd(x, y, x_mean=0.5, y_mean=0.8, x_sig=0.8, y_sig=0.8)
-        #z -= self.fd(x, y, x_mean=0.5, y_mean=0.8, x_sig=0.2, y_sig=0.35)
-        #z = -1 * self.fd(x, y, x_mean=-0.5, y_mean=-0.8, x_sig=0.35, y_sig=0.35)
+
+        z = -1 * self.fd(x, y, x_mean=-0.5, y_mean=-0.8, x_sig=0.35, y_sig=0.35)
 
 
-        """
         # three steep gaussian trenches
         z -= self.fd(x, y, x_mean=1.0, y_mean=-0.5, x_sig=0.1, y_sig=0.5)
         z -= self.fd(x, y, x_mean=-1.0, y_mean=0.5, x_sig=0.2, y_sig=0.2)
         z -= self.fd(x, y, x_mean=-0.5, y_mean=-0.8, x_sig=0.2, y_sig=0.2)
-        """
+
         return z
 
 

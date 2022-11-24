@@ -245,6 +245,36 @@ def agent_statistics(results, params_dict, do_plot=True):
         plt.show()
     """
 
+    # select a starting point where the agent is the best optimizer
+    idx = np.array(best_optimizer_list) == "agent"
+    idx = np.where(idx)[0][0]
+    
+    # plot the trajectories of all optimizers for the selected starting point
+    fig, ax = plt.subplots(1, 1, figsize=(10, 10))
+    ax.contourf(X, Y, Z, 50,)
+    ax.set_title('Trajectories for the selected starting point')
+    ax.set_xlabel('x')
+    ax.set_ylabel('y')
+    for i, optimizer_name in enumerate(optimizer_names):
+        trajectories = results[optimizer_name]['trajectories']
+        ax.plot(trajectories[idx][:, 0], trajectories[idx][:, 1], 'o-', label=optimizer_name)
+    ax.legend()
+    plt.savefig("visualization/graphs/trajectories_selected.png")
+    if do_plot:
+        plt.show()
+    
+    # plot the objective values for the selected starting point and optimizer
+    fig, ax = plt.subplots(1, 1, figsize=(10, 10))
+    ax.set_title('Objective values for the selected starting point')
+    ax.set_xlabel('step')
+    ax.set_ylabel('objective value')
+    for i, optimizer_name in enumerate(optimizer_names):
+        obj_values = results[optimizer_name]['obj_values']
+        ax.plot(obj_values[idx], label=optimizer_name)
+    ax.legend()
+    plt.savefig("visualization/graphs/objective_values_selected.png")
+    if do_plot:
+        plt.show()
     # count the number of times each optimizer is the best
     best_optimizer_count = {}
     for optimizer_name in optimizer_names:
@@ -254,7 +284,7 @@ def agent_statistics(results, params_dict, do_plot=True):
 
 if __name__ == "__main__":
 
-    problemclass1 = YNormProblem
+    problemclass1 = GaussianHillsProblem
     problemclass2 = problemclass1
 
     filename = "visualization/graphs/"\
