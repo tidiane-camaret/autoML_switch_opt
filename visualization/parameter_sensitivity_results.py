@@ -12,6 +12,8 @@ with open('visualization/all_optimizer_results.pkl', 'rb') as f:
 #with open('visualization/all_score_matrices.pkl', 'rb') as f:
 #   all_score_matrices = pickle.load(f)
 
+agent_performance = agent_performance[:, 8]
+
 # plot mean and std results
 plt.plot(agent_performance.mean(axis=0))
 plt.fill_between(np.arange(agent_performance.shape[1]),
