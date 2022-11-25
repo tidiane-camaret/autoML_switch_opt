@@ -14,8 +14,8 @@ with open('visualization/all_optimizer_results.pkl', 'rb') as f:
 
 # plot the results
 plt.plot(agent_performance)
-# plot the mean
-plt.plot(np.mean(agent_performance, axis=0))
+
+plt.plot(np.mean(agent_performance, axis=0), label='mean')
 #add labels
 plt.xlabel('number of timesteps')
 plt.ylabel('number of times agent was best optimizer')
