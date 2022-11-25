@@ -140,7 +140,7 @@ def agent_statistics(results, params_dict, do_plot=True):
         for j, optimizer_name in enumerate(results.keys()):
             obj_values = results[optimizer_name]['obj_values']
             #score_matrix[i, j] = first_index_below_threshold(obj_values[i], threshold)
-            score_matrix[i, j] = np.mean(obj_values[i][10:])
+            score_matrix[i, j] = np.mean(obj_values[i][:])
 
     # list of best optimizers for each starting point. if the agent is in a tie with a handcrafted optimizer, the agent wins
     best_optimizer_list = []
@@ -167,7 +167,7 @@ def agent_statistics(results, params_dict, do_plot=True):
 
     # plot the best optimizer for each starting point on the problem surface. 
 
-    ax[1].contourf(X, Y, Z, 50,)
+    ax[1].contourf(X, Y, Z, 50, cmap="gray")
     ax[1].set_title('Best optimizer for each starting point')
     ax[1].set_xlabel('x')
     ax[1].set_ylabel('y')
@@ -208,7 +208,7 @@ def agent_statistics(results, params_dict, do_plot=True):
 
 
     # on the problem surface, plot agent actions for each starting point
-    ax[1].contourf(X, Y, Z, 50, cmap="binary")
+    ax[1].contourf(X, Y, Z, 50, cmap="gray")
     ax[1].set_title('Agent actions for each starting point')
     ax[1].set_xlabel('x')
     ax[1].set_ylabel('y')
@@ -244,7 +244,7 @@ def agent_statistics(results, params_dict, do_plot=True):
     
     # plot the trajectories of all optimizers for the selected starting point
     fig, ax = plt.subplots(1, 2, figsize=(10, 10))
-    ax[0].contourf(X, Y, Z, 50,)
+    ax[0].contourf(X, Y, Z, 50, cmap="gray")
     ax[0].set_title('Trajectories for the selected starting point')
     ax[0].set_xlabel('x')
     ax[0].set_ylabel('y')
@@ -272,12 +272,12 @@ def agent_statistics(results, params_dict, do_plot=True):
 
 
     plt.close('all')
-    return best_optimizer_count  
+    return best_optimizer_count, score_matrix
 
 if __name__ == "__main__":
 
-    problemclass1 = GaussianHillsProblem
-    problemclass2 = problemclass1
+    problemclass1 = NoisyHillsProblem
+    problemclass2 = GaussianHillsProblem
 
     filename = "visualization/graphs/"\
                 + problemclass1.__name__\
@@ -295,5 +295,5 @@ if __name__ == "__main__":
         with open(filename, 'wb') as f:
             pickle.dump((results, params_dict), f)
 
-    best_optimizer_count = agent_statistics(results, params_dict, do_plot=True)
+    best_optimizer_count, score_matrix = agent_statistics(results, params_dict, do_plot=True)
     print(best_optimizer_count)

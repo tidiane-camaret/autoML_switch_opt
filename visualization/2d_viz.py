@@ -7,7 +7,7 @@ from eval_functions import eval_agent, eval_handcrafted_optimizer, eval_switcher
 import torch 
 
 # problem instance
-problem = NormProblem
+problem = GaussianHillsProblem
 #problem = NoisyHillsProblem()
 
 xlim = 2
