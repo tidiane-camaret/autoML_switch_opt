@@ -12,10 +12,14 @@ with open('visualization/all_optimizer_results.pkl', 'rb') as f:
 #with open('visualization/all_score_matrices.pkl', 'rb') as f:
 #   all_score_matrices = pickle.load(f)
 
-# plot the results
-plt.plot(agent_performance)
+# plot mean and std results
+plt.plot(agent_performance.mean(axis=0))
+plt.fill_between(np.arange(agent_performance.shape[1]),
+                    agent_performance.mean(axis=0) - agent_performance.std(axis=0), 
+                    agent_performance.mean(axis=0) + agent_performance.std(axis=0),
+                    alpha=0.2)
+plt.show()
 
-plt.plot(np.mean(agent_performance, axis=0), label='mean')
 #add labels
 plt.xlabel('number of timesteps')
 plt.ylabel('number of times agent was best optimizer')
