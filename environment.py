@@ -88,6 +88,7 @@ class Environment(gym.Env):
 
         self.trained_optimizers = dict.fromkeys(self.optimizer_class_list)
         self.trained_optimizers_states = dict.fromkeys(self.optimizer_class_list)
+
         for key, _ in self.trained_optimizers.items():
             # initialise the optimisers
             optimizer_init = key(self.model.parameters(), lr=self.config.model.lr)
@@ -115,51 +116,55 @@ class Environment(gym.Env):
         # that we want to use on the next step
         # we calulate the new state and the reward
 
-        # update the parameters of all optimizers,
-        # this is to take care of information passing across optimizers of different classes
 
-        handcrafted_obj_values = []
-        k = 1
+        # calculate the lookaead objective values (no optimizer update, this will be done in the next step)
+        lookahead_obj_values = []
+        lookahead_steps = 1 # 
+
         for opt_class in self.optimizer_class_list:
+
             model_decoy = copy.deepcopy(self.model)
-            # calculate the gradients for all optimizers
-            #current_optimizer = self.trained_optimizers[opt_class]
 
             current_optimizer = opt_class(model_decoy.parameters(), lr=self.config.model.lr)
-            current_optimizer.load_state_dict(self.trained_optimizers_states[opt_class]) #do we need this?
+            current_optimizer.load_state_dict(self.trained_optimizers_states[opt_class]) 
+
             
-            with torch.enable_grad():
+            for i in range(lookahead_steps):
                 obj_value = self.objective_function(model_decoy)
                 current_optimizer.zero_grad()
                 obj_value.backward()
                 current_optimizer.step()
+            lookahead_obj_values.append(obj_value.item())
+
+        # update the parameters of every non chosen optimizer, on a decoy model (no update on the main model)
+
+        for opt_class in self.optimizer_class_list:
+            if opt_class != self.optimizer_class_list[action]:
+                current_optimizer = opt_class(model_decoy.parameters(), lr=self.config.model.lr)
+                current_optimizer.load_state_dict(self.trained_optimizers_states[opt_class])
+
+                with torch.enable_grad():
+                    obj_value = self.objective_function(model_decoy)
+                    current_optimizer.zero_grad()
+                    obj_value.backward()
+                    current_optimizer.step()
             # add the updated optimizer into list
 
-            #self.trained_optimizers[opt_class] = current_optimizer
-            self.trained_optimizers_states[opt_class] = current_optimizer.state_dict()
-            
-            for i in range(k):
-                obj_value = self.objective_function(model_decoy)
-                current_optimizer.zero_grad()
-                obj_value.backward()
-                current_optimizer.step()
-            handcrafted_obj_values.append(obj_value.item())
+                self.trained_optimizers_states[opt_class] = current_optimizer.state_dict()
 
-        #print(handcrafted_obj_values)
-        #print(np.argmin(handcrafted_obj_values))
-        # use the optimizer that the agent selected to update model params
-        """
-        optimizer_class = self.optimizer_class_list[action]
-        optimizer = self.trained_optimizers[optimizer_class]
-        """
-        optimizer_class = self.optimizer_class_list[action]
-        optimizer = optimizer_class(self.model.parameters(), lr=self.config.model.lr)
-        optimizer.load_state_dict(self.trained_optimizers_states[optimizer_class])
+        # load the chosen optimizer 
 
-        # (self.model.parameters())
+        if config.environment.optimizer_storing_method == "state_dict":
+            optimizer_class = self.optimizer_class_list[action]
+            optimizer = optimizer_class(self.model.parameters(), lr=self.config.model.lr)
+            optimizer.load_state_dict(self.trained_optimizers_states[optimizer_class])
 
-        # update the model and
-        # calculate the new objective value
+        elif config.environment.optimizer_storing_method == "class_dict":
+            optimizer = self.trained_optimizers[self.optimizer_class_list[action]]
+
+
+        # update the model and the optimizer
+
         with torch.enable_grad():
             # if the problem is a low dimensional problem, extract the current point
             if isinstance(self.model, Variable):
@@ -171,11 +176,7 @@ class Environment(gym.Env):
             obj_value.backward()
             # update model parameters
             optimizer.step()
-            # optimizer.zero_grad()
-        # add the updated optimizer into list
-        # self.trained_optimizers[optimizer_class] = optimizer.state_dict()
 
-        # print(opt_s)
 
         # Calculate the current gradient and flatten it
         current_grad = torch.cat(
@@ -199,14 +200,12 @@ class Environment(gym.Env):
             self.history_len,
         )
 
-        #observation = np.ndarray.flatten(observation)
-
 
         obj_value = obj_value.item()
         self.obj_values_sum += obj_value
 
         if config.environment.reward_system == "lookahead":
-            reward = 1 if action == np.argmin(handcrafted_obj_values) else 0
+            reward = 1 if action == np.argmin(lookahead_obj_values) else 0
         elif config.environment.reward_system == "function":
             reward = self.reward_function(obj_value)
         else:

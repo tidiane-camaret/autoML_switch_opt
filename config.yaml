@@ -1,6 +1,6 @@
 model:
   num_problems : 1000
-  num_agent_runs : 10
+  num_agent_runs : 100
   model_training_steps : 100
   history_len: 5
   epochs : 10
@@ -9,9 +9,9 @@ model:
 
 policy:
   model: 'DQN' # options:['DQN', 'PPO']
-  exploration_fraction : 0.5
+  exploration_fraction : 0.1
   
   
 environment:
-  reward_system : "function" # options:['function', 'lookahead']
-  optimizer_storing : "dict" # options:['dict', optimizer_class']
+  reward_system : "lookahead" # options:['function', 'lookahead']
+  optimizer_storing_method : "state_dict" # options:['state_dict','class_dict']

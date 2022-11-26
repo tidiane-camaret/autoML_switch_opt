@@ -81,7 +81,7 @@ plt.plot(np.mean(obj_values, axis=0), label='untrained', alpha=0.7)
 plt.fill_between(np.arange(len(obj_values[0])), np.mean(obj_values, axis=0) - np.std(obj_values, axis=0),
                  np.mean(obj_values, axis=0) + np.std(obj_values, axis=0), alpha=0.2)
 
-policy.learn(total_timesteps=agent_training_timesteps)
+policy.learn(total_timesteps=agent_training_timesteps,progress_bar=True,)
 
 #obj_values, np.array(trajectories), actions
 #trained_actions, trained_rewards, = eval_agent(test_env, policy, num_steps=model_training_steps)
