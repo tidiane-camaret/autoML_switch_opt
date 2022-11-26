@@ -43,25 +43,29 @@ normalized_matrices_std = np.std(normalized_matrices, axis=1)
 print(normalized_matrices_mean[:,1])
 print(normalized_matrices_std)
 
+
+fig, ax = plt.subplots(1,2,figsize=(10, 10))
 # plot mean and std of top_matrices
 for i in range(normalized_matrices_mean.shape[1]):
-    plt.plot(normalized_matrices_mean[:, i], label="optimizer {}".format(i))
+    ax[0].plot(normalized_matrices_mean[:, i], label="optimizer {}".format(i))
     # add error bars
-    plt.fill_between(np.arange(normalized_matrices_mean.shape[0]),
+    ax[0].fill_between(np.arange(normalized_matrices_mean.shape[0]),
                         normalized_matrices_mean[:, i] - normalized_matrices_std[:, i],
                         normalized_matrices_mean[:, i] + normalized_matrices_std[:, i],
                         alpha=0.2)
-plt.legend()
-plt.show()
+ax[0].legend()
+
 
 
 # plot mean and std of normalized_matrices
 for i in range(normalized_matrices_mean.shape[1]):
-    plt.plot(normalized_matrices_mean[:, i], label="optimizer {}".format(i))
+    ax[1].plot(normalized_matrices_mean[:, i], label="optimizer {}".format(i))
     # add error bars
-    plt.fill_between(np.arange(normalized_matrices_mean.shape[0]),
+    ax[1].fill_between(np.arange(normalized_matrices_mean.shape[0]),
                         normalized_matrices_mean[:, i] - normalized_matrices_std[:, i],
                         normalized_matrices_mean[:, i] + normalized_matrices_std[:, i],
                         alpha=0.2)
-plt.legend()
-plt.show()
+ax[1].legend()
+
+#save plot
+plt.savefig('visualization/parameter_sensitivity_results.png')
