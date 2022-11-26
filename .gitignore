@@ -1,16 +1,23 @@
 tb_logs/
 *.pyc
-__pycache__/environment.cpython-310.pyc
-<<<<<<< Updated upstream
+.idea/.gitignore
+.idea/autoML_switch_opt.iml
+.idea/misc.xml
+.idea/modules.xml
+.idea/vcs.xml
+.idea/inspectionProfiles/profiles_settings.xml
+.idea/inspectionProfiles/Project_Default.xml
+__pycache__/
+__pycache__/*
+__pycache__/problem.cpython-310.pyc
+__pycache__/train_agent.cpython-310.pyc
 .spyproject/
-data/
-=======
+.idea/
+__pycache__/environment.cpython-310.pyc
+__pycache__/environment.cpython-310.pyc
 2d_viz/graphs/
 2d_viz/models/
 src.egg-info/
 visualization/graphs/
 *.pkl
 data/
-
-
->>>>>>> Stashed changes
