@@ -3,82 +3,144 @@ from torch import nn
 import numpy as np 
 from torch.nn import functional as F
 import torchvision.datasets as datasets
+from torch.utils.data import RandomSampler, Subset
+import torchvision.transforms as transforms 
 
-def init_weights(m): 
-    # initialize weights of the model m 
+
+def init_weights(m):
+    # initialize weights of the model m
+
     if isinstance(m, nn.Linear):
         torch.nn.init.xavier_uniform_(m.weight)
         m.bias.data.fill_(0.01)
 
-def mlp_problem():
-    #print("here")
-    num_vars = 2
 
-    # Create four gaussian distributions with random mean and covariance
-    gaussians = [
-        torch.distributions.multivariate_normal.MultivariateNormal(
-            loc=torch.randn(num_vars),
-            covariance_matrix=torch.eye(num_vars) * torch.rand(1),
-            #scale_tril=torch.tril(torch.randn((num_vars, num_vars))),
-        )
-        for _ in range(4)
-    ]
+class Variable(nn.Module):
+    """A wrapper to turn a tensor of parameters into a module for optimization."""
 
-    # Randomly assign each of the four gaussians a 0-1 label
-    # Do again if all four gaussians have the same label (don't want that)
-    gaussian_labels = np.zeros((4,))
-    while (gaussian_labels == 0).all() or (gaussian_labels == 1).all():
-        gaussian_labels = torch.randint(0, 2, size=(4,))
-
-    # Generate a dataset of 100 points with 25 points drawn from each gaussian
-    # Label of the datapoint is the same as the label of the gaussian it came from
-    x = torch.cat([g.sample((25,)) for g in gaussians])
-    y = torch.cat([torch.full((25,), float(label)) for label in gaussian_labels])
-    perm = torch.randperm(len(x))
-    x = x[perm]
-    y = y[perm]
-
-    model0 = nn.Sequential(
-        nn.Linear(num_vars, 2), nn.ReLU(), nn.Linear(2, 1), nn.Sigmoid()
-    )
-
-    model0.apply(init_weights)
-
-    def obj_function(model):
-        y_hat = model(x).view(-1)
-        weight_norm = model[0].weight.norm() + model[2].weight.norm()
-        return F.binary_cross_entropy(y_hat, y) + 5e-4 / 2 * weight_norm
-
-    return {"model0": model0, "obj_function": obj_function, "dataset": (x, y)}
-
+    def __init__(self, data: torch.Tensor):
+        """Create Variable holding `data` tensor."""
+        super().__init__()
+        self.x = nn.Parameter(data)
+        
 class MNISTProblemClass:
+    
     def __init__(self, 
-                 quantization_level=2,
+                 classes,
+                 batch_size=5,
+                 num_classes_selected=2,
+                 weights_flag = False
                  ):
         
-        mnist_trainset = datasets.MNIST(root='./data', train=True, download=True, transform=None)
-        mnist_testset = datasets.MNIST(root='./data', train=False, download=True, transform=None)
-        
         #maximum is 45 
-        
+        self.batch_size = batch_size
+        self.num_classes_selected= num_classes_selected
+        self.weights_flag = weights_flag
         self.num_classes = 10
-        #choose from the number of classes two random ones
-        self.pair = np.random.choice(self.num_classes, 2)
+        #classes that define the problem
+        self.classes = classes
+        #tranform data, resize to make it smaller
+        transform =  transforms.Compose([transforms.ToTensor(), transforms.Resize(10),
+                                            transforms.Normalize((0.5,), (0.5,))
+                                            ])
+        mnist_trainset = datasets.MNIST(root='./data', train=True, download=True, transform=transform)
         
-        # Selecting the classes chosen 
-        idx = (mnist_trainset.targets==self.pair[0]) | (mnist_trainset.targets==self.pair[1]) 
+        # getting the classes chosen from train dataset
+        idx = (mnist_trainset.targets==self.classes[0]) | (mnist_trainset.targets==self.classes[1]) 
+        
         mnist_trainset.targets = mnist_trainset.targets[idx]
         mnist_trainset.data = mnist_trainset.data[idx]
-    
+        
+        #assign classes to 0 or 1 label - for proper computing of loss
+        for i in range(0, len(mnist_trainset.targets )):
+            if mnist_trainset.targets[i] ==self.classes[0]:
+                
+                mnist_trainset.targets[i] = 0
+            else:
+                
+                mnist_trainset.targets[i] = 1
+        
+        #set dataset
         self.dataset = mnist_trainset
         
         
-        self.model0 = nn.Sequential(
-            nn.Linear(num_vars, 2), nn.ReLU(), nn.Linear(2, self.num_classes), nn.Sigmoid()
+        #model definition
+        
+        
+        self.model0 = nn.Sequential(         
+            nn.Conv2d(
+                in_channels=1,              
+                out_channels=5,            
+                kernel_size=5,              
+                stride=1,                   
+                padding=2,                  
+            ),                              
+            nn.ReLU(),   
+            
+            nn.AdaptiveMaxPool2d(3),  
+            nn.Flatten(),
+            
+            nn.Linear(45, 1),
+            nn.Sigmoid()
         )
+        
+        
+        if(weights_flag):
+            self.model0.apply(init_weights)
+        
+        self.obj_function = self._obj_function
+        
+    
+    #prepares data from sampler to be inputted to model 
+    def load_data_from_sampler(self, subset):
+        batch_data = torch.tensor([])
+        batch_labels = torch.tensor([])
+        #loop over the batch generated,
+        #data samples go in batch_data tensor, labels go in batch_labels
+        for data, target in subset:
+            batch_data = torch.cat((batch_data, data), dim = 0)
+            batch_labels = torch.cat((batch_labels, torch.tensor([int(target)])), dim = 0)
+        return batch_data, batch_labels
+    
+    
+    
+    def _obj_function(self, model):
+        #defining criteria of loss
+        criterion = nn.BCELoss()
+        #use random sampler to get random indices in dataset
+        #the indices will determine our random batch
+        mnist_trainset = self.dataset
+        #get defining indices
+        batch_indices = RandomSampler(mnist_trainset, replacement=True, num_samples=self.batch_size, generator=None)
+        #pass indices to subset in order to get a sample
+        current_batch = Subset(mnist_trainset, list(batch_indices))
+        running_loss=0
+        #split the subsample into data and labels to be fed to model
+        batch_data, batch_labels = self.load_data_from_sampler(current_batch)
+        #reshaping bc pytorch wants input of [batch, channel, height, width] - since we have o
+        batch_data = batch_data[:, None, :, :]
+        
+        y_hat = model(batch_data)
+        batch_labels = torch.reshape(batch_labels, ( 5, 1))
+        
+        loss = criterion(y_hat, batch_labels)
+        running_loss += loss.item()
+        self.running_loss = running_loss
+        return loss
+        
+    def get_obj_function(self):
+        return self.obj_function
 
+
+class Variable2D(nn.Module):
+    """A wrapper to turn a tensor of parameters into a module for optimization."""
+
+    def __init__(self, data: torch.Tensor):
+        """Create Variable holding `data` tensor."""
+        super().__init__()
+        self.x = nn.Parameter(data[0])
+        self.y = nn.Parameter(data[1])
         self.model0.apply(init_weights)
-
         self.obj_function = self._obj_function
         
 # define mlp_problem, but as a class
@@ -134,3 +196,204 @@ class MLPProblemClass:
 
     def get_dataset(self):
         return self.dataset
+
+# define rosenbrock problem as a class
+class RosenbrockProblem:
+    
+        def __init__(self, 
+                    x0=None,
+                    num_vars=2,     
+                    ):
+            if x0 is None:
+                x0 = torch.tensor([-1.5 if i % 2 == 0 else 1.5 for i in range(num_vars)], dtype=torch.float32, requires_grad=True)
+            else :
+                x0 = torch.tensor(x0, dtype=torch.float32, requires_grad=True)
+                
+            self.model0 = Variable(x0)
+
+        #def function_def(self, x):
+        #    return torch.sum(100.0 * (x[1:] - x[:-1] ** 2.0) ** 2.0 + (1 - x[:-1]) ** 2.0)
+
+        def function_def(self, x, y):
+            return (1-x)**2 + 100*(y-x**2)**2
+
+        def obj_function(self, model):
+            x = model.x
+            return self.function_def(x[0],x[1])
+    
+class SquareProblemClass:
+    
+        def __init__(self, 
+                    x0=0,
+                    scale=1,
+                    center=1
+                    ):
+
+            x0 = torch.tensor([x0], dtype=torch.float32, requires_grad=True)
+            self.model0 = Variable(x0)
+            self.scale = scale
+            self.center = center
+
+        def function_def(self, x):
+            return self.scale*(x-self.center)**2
+
+        def obj_function(self, model):
+            x = model.x
+            return self.function_def(x[0])
+
+class NoisyHillsProblem:
+
+        def __init__(self, 
+                x0=[0,0],
+                scale=1,
+                center=1
+                ):
+
+            x0 = torch.tensor(x0, dtype=torch.float32, requires_grad=True)
+            self.model0 = Variable(x0)
+            self.scale = scale
+            self.center = center
+
+        def function_def(self, x, y):
+            return -1 * torch.sin(x * x) * torch.cos(3 * y * y) * torch.exp(-(x * y) * (x * y)) - torch.exp(-(x + y) * (x + y))
+
+
+        def obj_function(self, model):
+            x = model.x
+            return self.function_def(x[0],x[1])
+           
+
+
+class RastriginProblem():
+
+    def __init__(self, 
+                x0=[0,0],
+                scale=1,
+                center=1
+                ):
+
+        x0 = torch.tensor(x0, dtype=torch.float32, requires_grad=True)
+        self.model0 = Variable(x0)
+        self.scale = scale
+        self.center = center
+
+    def function_def(self, x, y):
+        return 20 + x**2 - 10*torch.cos(2*np.pi*x) + y**2 - 10*torch.cos(2*np.pi*y)
+
+    def obj_function(self, model):
+        x = model.x
+        return self.function_def(x[0],x[1])
+
+
+class AckleyProblem():
+
+    def __init__(self, 
+                x0=[0,0],
+                scale=1,
+                center=1
+                ):
+
+        x0 = torch.tensor(x0, dtype=torch.float32, requires_grad=True)
+        self.model0 = Variable(x0)
+        self.scale = scale
+        self.center = center
+
+    def function_def(self, x, y):
+        return -20*torch.exp(-0.2*torch.sqrt(0.5*(x**2 + y**2))) - torch.exp(0.5*(torch.cos(2*torch.pi*x) + torch.cos(2*torch.pi*y))) + np.exp(1) + 20
+
+    def obj_function(self, model):
+        x = model.x
+        return self.function_def(x[0],x[1])
+class GaussianHillsProblem:
+
+    def __init__(self, 
+            x0=[0,0],
+            scale=1,
+            center=1
+            ):
+
+        x0 = torch.tensor(x0, dtype=torch.float32, requires_grad=True)
+        self.model0 = Variable(x0)
+        self.scale = scale
+        self.center = center
+
+    def fd(self, x, y, x_mean, y_mean, x_sig, y_sig):
+        normalizing = 1 / (2 * torch.pi * x_sig * y_sig)
+        x_exp = (-1 * (x - x_mean)**2) / (2 * (x_sig)**2)
+        y_exp = (-1 * (y - y_mean)**2) / (2 * (y_sig)**2)
+        return normalizing * torch.exp(x_exp + y_exp)
+
+    def function_def(self, x, y):
+
+        z = -1 * self.fd(x, y, x_mean=-0.5, y_mean=-0.8, x_sig=0.35, y_sig=0.35)
+
+
+        # three steep gaussian trenches
+        z -= self.fd(x, y, x_mean=1.0, y_mean=-0.5, x_sig=0.1, y_sig=0.5)
+        z -= self.fd(x, y, x_mean=-1.0, y_mean=0.5, x_sig=0.2, y_sig=0.2)
+        z -= self.fd(x, y, x_mean=-0.5, y_mean=-0.8, x_sig=0.2, y_sig=0.2)
+
+        return z
+
+
+    def obj_function(self, model):
+        x = model.x
+        return self.function_def(x[0],x[1])
+
+class NormProblem:
+
+    def __init__(self, 
+            x0=[0,0],
+            scale=1,
+            center=1
+            ):
+
+        x0 = torch.tensor(x0, dtype=torch.float32, requires_grad=True)
+        self.model0 = Variable(x0)
+        self.scale = scale
+        self.center = center
+
+    def function_def(self, x, y):
+        return torch.sqrt(x**2 + (1.1*y)**2)
+    def obj_function(self, model):
+        x = model.x
+        return self.function_def(x[0],x[1])
+
+class YNormProblem:
+
+    def __init__(self, 
+            x0=[0,0],
+            scale=1,
+            center=1
+            ):
+
+        x0 = torch.tensor(x0, dtype=torch.float32, requires_grad=True)
+        self.model0 = Variable(x0)
+        self.scale = scale
+        self.center = center
+
+    def function_def(self, x, y):
+        return torch.sqrt(y**2) * 10
+
+    def obj_function(self, model):
+        x = model.x
+        return self.function_def(x[0],x[1])
+
+class BealeProblem:
+    def __init__(self, x_start, y_start):
+        
+        self.model0 = Variable2D(torch.tensor([x_start, y_start],  dtype=torch.float32, requires_grad= True))
+    
+    def function(self, model):
+        x = model.x
+        y = model.y
+        first_comp = (1.5 - x+ (x*y))**2
+        second_comp = (2.25 - x+ (x*(y**2)))**2
+        third_comp = (2.625 - x + (x*(y)**3))**2
+        
+        result = first_comp + second_comp + third_comp
+        return result
+    
+    def obj_function(self, model):
+        return self.function(model)
+

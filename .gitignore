@@ -1,5 +1,16 @@
 tb_logs/
 *.pyc
 __pycache__/environment.cpython-310.pyc
+<<<<<<< Updated upstream
 .spyproject/
 data/
+=======
+2d_viz/graphs/
+2d_viz/models/
+src.egg-info/
+visualization/graphs/
+*.pkl
+data/
+
+
+>>>>>>> Stashed changes

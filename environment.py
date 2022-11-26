@@ -4,6 +4,8 @@ import torch
 from gym import spaces
 import numpy as np
 from torch import nn
+from problem import Variable
+from omegaconf import OmegaConf
 
 def init_weights(m): 
     # initialize weights of the model m 
@@ -107,6 +109,12 @@ class Environment(gym.Env):
         #update the parameters of all optimizers,
         #this is to take care of information passing across optimizers of different classes
         
+
+
+        # calculate the lookaead objective values (no optimizer update, this will be done in the next step)
+        lookahead_obj_values = []
+        lookahead_steps = 2 # 
+
         for opt_class in self.optimizer_class_list:
             #calculate the gradients for all optimizers
             current_optimizer = self.trained_optimizers[opt_class]
