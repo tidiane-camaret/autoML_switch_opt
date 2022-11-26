@@ -6,9 +6,10 @@ import os, pickle
 from problem import NoisyHillsProblem, GaussianHillsProblem, RosenbrockProblem\
     ,RastriginProblem, SquareProblemClass, AckleyProblem, NormProblem, \
         YNormProblem
-import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('Agg')
+from matplotlib import pyplot as plt
 import numpy as np
-from matplotlib.colors import LogNorm
 from eval_functions import eval_agent, eval_handcrafted_optimizer
 import torch
 from omegaconf import OmegaConf
@@ -29,7 +30,7 @@ optimizer_class_list = [torch.optim.SGD, torch.optim.Adam]
 
 # define the problem lists
 xlim = 2
-nb_train_points = 1000
+nb_train_points = config.model.num_problems
 nb_test_points = 100
 
 
@@ -108,6 +109,7 @@ def train_and_eval_agent(problemclass1, problemclass2, agent_training_timesteps,
     policy.learn(total_timesteps=agent_training_timesteps, progress_bar=True,eval_freq=1000, eval_log_path='tb_logs/single_problem_gaussian_hills_dqn_eval')
     optimizer_name = 'agent'
     results[optimizer_name] = {}
+    train_env.train_mode = False # remove train mode, avoids calculating the lookahead
     obj_values, trajectories, actions = eval_agent(train_env, 
                                                     policy, 
                                                     problem_list=test_problem_list, 

@@ -29,7 +29,7 @@ problemclass_train = YNormProblem
 problemclass_test = YNormProblem
 
 xlim = 2
-nb_train_points = 1000
+nb_train_points = num_problems
 nb_test_points = 100
 
 
@@ -80,7 +80,7 @@ for _ in range(epochs):
     test_env.reset()
     for _ in range(model_training_steps):
         action = test_env.action_space.sample()
-        obs, reward, _, info = test_env.step(action)
+        obs, _, _, info = test_env.step(action)
         actions_.append(action)
         obj_values_.append(info["obj_value"])
     actions.append(actions_)
@@ -90,7 +90,7 @@ plt.plot(np.mean(obj_values, axis=0), label='untrained', alpha=0.7)
 plt.fill_between(np.arange(len(obj_values[0])), np.mean(obj_values, axis=0) - np.std(obj_values, axis=0),
                  np.mean(obj_values, axis=0) + np.std(obj_values, axis=0), alpha=0.2)
 
-policy.learn(total_timesteps=agent_training_timesteps,progress_bar=True,)
+policy.learn(total_timesteps=agent_training_timesteps,progress_bar=True, eval_freq=1000, eval_log_path='tb_logs/agent_eval')
 
 #obj_values, np.array(trajectories), actions
 #trained_actions, trained_rewards, = eval_agent(test_env, policy, num_steps=model_training_steps)

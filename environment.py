@@ -56,6 +56,7 @@ class Environment(gym.Env):
         self._setup_episode()
         self.num_params = sum(p.numel() for p in self.model.parameters())
         self.reward_function = reward_function
+        self.train_mode = True
 
         # Define action and observation space
         # Action space is the index of the optimizer class
@@ -115,13 +116,13 @@ class Environment(gym.Env):
         # that we want to use on the next step
         # we calulate the new state and the reward
 
-
+        lookahead_obj_values = np.zeros(len(self.optimizer_class_list))
         # calculate the lookaead objective values (no optimizer update, this will be done in the next step)
-        if config.environment.reward_system == "lookahead":
-            lookahead_obj_values = []
+        if config.environment.reward_system == "lookahead" and self.train_mode:
+            
             lookahead_steps = 2 # if we look only one step head, lookahead values are the same for all optimizers. TODO : See why.
 
-            for opt_class in self.optimizer_class_list:
+            for o, opt_class in enumerate(self.optimizer_class_list):
 
                 model_decoy = copy.deepcopy(self.model)
 
@@ -134,7 +135,7 @@ class Environment(gym.Env):
                     current_optimizer.zero_grad()
                     obj_value.backward()
                     current_optimizer.step()
-                lookahead_obj_values.append(obj_value.item())
+                lookahead_obj_values[o] = obj_value.item()
             #print("lookahead_obj_values", lookahead_obj_values)
 
         # update the parameters of every non chosen optimizer, on a decoy model (no update on the main model)

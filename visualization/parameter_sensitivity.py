@@ -20,12 +20,11 @@ if __name__ == "__main__":
 
     agent_performance = []
 
-    nb_timesteps_list = [100000]
+    nb_timesteps_list = [25000, 50000, 75000, 100000]
     nb_trials = 10
     
     all_optimizer_results = []
     all_score_matrices = []
-
     agent_performance = np.zeros((nb_trials, len(nb_timesteps_list)))
 
     for i, nb_timesteps in enumerate(nb_timesteps_list):
@@ -35,7 +34,7 @@ if __name__ == "__main__":
         for trial in range(nb_trials):
             results, params_dict = train_and_eval_agent(problemclass1, problemclass2, nb_timesteps)
             best_optimizer_count, score_matrix = agent_statistics(results, params_dict, do_plot=False)
-            print(best_optimizer_count['agent'])
+            print("agent performance: ", best_optimizer_count["agent"])
             agent_performance[trial, i] = best_optimizer_count["agent"]
             aor.append(best_optimizer_count)
             asm.append(score_matrix)
