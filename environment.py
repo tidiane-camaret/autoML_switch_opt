@@ -98,7 +98,6 @@ class Environment(gym.Env):
         self.obj_values = []
         self.gradients = []
         self.current_step = 0
-        self.obj_values_sum = 0
 
     # reset the environment when the episode is over
     def reset(self, problem=None):
@@ -118,28 +117,33 @@ class Environment(gym.Env):
 
 
         # calculate the lookaead objective values (no optimizer update, this will be done in the next step)
-        lookahead_obj_values = []
-        lookahead_steps = 1 # 
+        if config.environment.reward_system == "lookahead":
+            lookahead_obj_values = []
+            lookahead_steps = 2 # if we look only one step head, lookahead values are the same for all optimizers. TODO : See why.
 
-        for opt_class in self.optimizer_class_list:
+            for opt_class in self.optimizer_class_list:
 
-            model_decoy = copy.deepcopy(self.model)
+                model_decoy = copy.deepcopy(self.model)
 
-            current_optimizer = opt_class(model_decoy.parameters(), lr=self.config.model.lr)
-            current_optimizer.load_state_dict(self.trained_optimizers_states[opt_class]) 
+                current_optimizer = opt_class(model_decoy.parameters(), lr=self.config.model.lr)
+                current_optimizer.load_state_dict(self.trained_optimizers_states[opt_class]) 
 
-            
-            for i in range(lookahead_steps):
-                obj_value = self.objective_function(model_decoy)
-                current_optimizer.zero_grad()
-                obj_value.backward()
-                current_optimizer.step()
-            lookahead_obj_values.append(obj_value.item())
+                
+                for i in range(lookahead_steps):
+                    obj_value = self.objective_function(model_decoy)
+                    current_optimizer.zero_grad()
+                    obj_value.backward()
+                    current_optimizer.step()
+                lookahead_obj_values.append(obj_value.item())
+            #print("lookahead_obj_values", lookahead_obj_values)
 
         # update the parameters of every non chosen optimizer, on a decoy model (no update on the main model)
 
         for opt_class in self.optimizer_class_list:
             if opt_class != self.optimizer_class_list[action]:
+
+                model_decoy = copy.deepcopy(self.model)
+
                 current_optimizer = opt_class(model_decoy.parameters(), lr=self.config.model.lr)
                 current_optimizer.load_state_dict(self.trained_optimizers_states[opt_class])
 
@@ -177,11 +181,20 @@ class Environment(gym.Env):
             # update model parameters
             optimizer.step()
 
+        # save the optimizer state
+        if config.environment.optimizer_storing_method == "state_dict":
+            self.trained_optimizers_states[optimizer_class] = optimizer.state_dict()
+
+        elif config.environment.optimizer_storing_method == "class_dict":
+            self.trained_optimizers[self.optimizer_class_list[action]] = optimizer
+
 
         # Calculate the current gradient and flatten it
         current_grad = torch.cat(
             [p.grad.flatten() for p in self.model.parameters()]
         ).flatten()
+
+        obj_value = obj_value.item()
 
         # Update history of objective values and gradients with current objective
         # value and gradient.
@@ -193,16 +206,12 @@ class Environment(gym.Env):
 
         # Return observation, reward, done, and empty info
         observation = make_observation(
-            obj_value.item(),
+            obj_value,
             self.obj_values,
             self.gradients,
             self.num_params,
             self.history_len,
         )
-
-
-        obj_value = obj_value.item()
-        self.obj_values_sum += obj_value
 
         if config.environment.reward_system == "lookahead":
             reward = 1 if action == np.argmin(lookahead_obj_values) else 0

@@ -9,7 +9,7 @@ from problem import NoisyHillsProblem, GaussianHillsProblem, RosenbrockProblem\
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import LogNorm
-from eval_functions import eval_agent, eval_handcrafted_optimizer, eval_switcher_optimizer, first_index_below_threshold
+from eval_functions import eval_agent, eval_handcrafted_optimizer
 import torch
 from omegaconf import OmegaConf
 from eval_functions import first_index_below_threshold
@@ -276,7 +276,7 @@ def agent_statistics(results, params_dict, do_plot=True):
 
 if __name__ == "__main__":
 
-    problemclass1 = NoisyHillsProblem
+    problemclass1 = GaussianHillsProblem
     problemclass2 = GaussianHillsProblem
 
     filename = "visualization/graphs/"\
