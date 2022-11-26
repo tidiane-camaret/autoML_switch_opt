@@ -64,26 +64,28 @@ else:
     print('policy is not selected, it is set DQN')
     policy = stable_baselines3.DQN('MlpPolicy', train_env, verbose=0, exploration_fraction=config.policy.exploration_fraction,
                                    tensorboard_log='tb_logs/norm')
-actions, rewards = [], []
+actions, obj_values = [], []
 epochs = config.model.epochs
 for _ in range(epochs):
-    actions_, rewards_ = [], []
+    actions_, obj_values_ = [], []
     test_env.reset()
     for _ in range(model_training_steps):
         action = test_env.action_space.sample()
-        obs, reward, _, _ = test_env.step(action)
+        obs, reward, _, info = test_env.step(action)
         actions_.append(action)
-        rewards_.append(reward)
+        obj_values_.append(info["obj_value"])
     actions.append(actions_)
-    rewards.append(rewards_)
+    obj_values.append(obj_values_)
 
-plt.plot(np.mean(rewards, axis=0), label='untrained', alpha=0.7)
-plt.fill_between(np.arange(len(rewards[0])), np.mean(rewards, axis=0) - np.std(rewards, axis=0),
-                 np.mean(rewards, axis=0) + np.std(rewards, axis=0), alpha=0.2)
+plt.plot(np.mean(obj_values, axis=0), label='untrained', alpha=0.7)
+plt.fill_between(np.arange(len(obj_values[0])), np.mean(obj_values, axis=0) - np.std(obj_values, axis=0),
+                 np.mean(obj_values, axis=0) + np.std(obj_values, axis=0), alpha=0.2)
 
 policy.learn(total_timesteps=agent_training_timesteps)
 
-trained_actions, trained_rewards = eval_agent(test_env, policy, num_steps=model_training_steps)
+#obj_values, np.array(trajectories), actions
+#trained_actions, trained_rewards, = eval_agent(test_env, policy, num_steps=model_training_steps)
+trained_rewards, _ , trained_actions = eval_agent(test_env, policy, num_steps=model_training_steps)
 
 plt.plot(np.mean(trained_rewards, axis=0), label='trained', alpha=0.7)
 plt.fill_between(np.arange(len(trained_rewards[0])), np.mean(trained_rewards, axis=0) - np.std(trained_rewards, axis=0),

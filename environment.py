@@ -6,6 +6,10 @@ import numpy as np
 from torch import nn
 import numpy as np
 from problem import Variable
+from omegaconf import OmegaConf
+
+
+config = OmegaConf.load('config.yaml')
 
 def init_weights(m):
     # initialize weights of the model m
@@ -201,8 +205,12 @@ class Environment(gym.Env):
         obj_value = obj_value.item()
         self.obj_values_sum += obj_value
 
-        reward = 1 if action == np.argmin(handcrafted_obj_values) else 0
-        #reward = self.reward_function(obj_value)
+        if config.environment.reward_system == "lookahead":
+            reward = 1 if action == np.argmin(handcrafted_obj_values) else 0
+        elif config.environment.reward_system == "function":
+            reward = self.reward_function(obj_value)
+        else:
+            raise NotImplementedError
         
         done = self.current_step >= self.num_steps
 

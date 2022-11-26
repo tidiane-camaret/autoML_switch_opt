@@ -259,3 +259,4 @@ class YNormProblem:
     def obj_function(self, model):
         x = model.x
         return self.function_def(x[0],x[1])
+
