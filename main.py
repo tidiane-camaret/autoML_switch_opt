@@ -22,24 +22,24 @@ agent_training_timesteps = num_agent_runs * model_training_steps
 
 # define the problem list
 
-# starting_points = np.arange(-0.5, -0.25, 0.01)
-# train_problem_list = [SquareProblemClass(
-#     x0=x0
-#     ) for x0 in starting_points]
-# test_problem_list = [SquareProblemClass(x0=-0.4)]
+starting_points = np.arange(-0.5, -0.25, 0.01)
+train_problem_list = [SquareProblemClass(
+    x0=x0
+    ) for x0 in starting_points]
+test_problem_list = [SquareProblemClass(x0=-0.4)]
 
-#
+
 #
 # train_problem_list = []
 # for i in range(config.model.num_problems):
 #     problem = AckleyProblem(x0=np.random.rand(2) * 0.5)
 #     train_problem_list.append(problem)
 # test_problem_list = [AckleyProblem(x0=[-2.3, 3.6])]
+#
 
 
-
-train_problem_list = [MLPProblemClass() for _ in range(num_problems)]
-test_problem_list = [MLPProblemClass()]
+# train_problem_list = [MLPProblemClass() for _ in range(num_problems)]
+# test_problem_list = [MLPProblemClass()]
 
 # optimizer classes
 #optimizer_class_list = [i for i in range(50)]  # [torch.optim.SGD, torch.optim.RMSprop, torch.optim.Adam, torch.optim.Adam, torch.optim.Adam]

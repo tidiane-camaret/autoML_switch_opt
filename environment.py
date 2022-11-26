@@ -55,7 +55,7 @@ class Environment(gym.Env):
         # Define action and observation space
         # Action space is the index of the optimizer class
         # that we want to use on the next step
-        self.action_space = spaces.Box(low=np.array([0.01, 0.998]), high=np.array([0.999, 0.999]), dtype=np.float32)
+        self.action_space = spaces.Box(low=np.array([0.01, 0.99]), high=np.array([0.999, 0.999]), dtype=np.float32)
         #spaces.Box(low=np.array([0.01, 0.01, 0.0, 0.0]), high=np.array([0.999, 0.999, 0.999, 0.999]), dtype=np.float32) #(action[0], 0.999, 0.0, 0.0)
         # spaces.Discrete(len(self.optimizer_class_list))
         # Observation space is the history of
