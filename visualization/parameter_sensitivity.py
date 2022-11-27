@@ -2,7 +2,7 @@ import os, pickle
 from problem import NoisyHillsProblem, GaussianHillsProblem, RosenbrockProblem\
     ,RastriginProblem, SquareProblemClass, AckleyProblem, NormProblem, \
         YNormProblem
-from train_and_eval_agent import train_and_eval_agent, agent_statistics
+from visualization.train_and_eval_agent import train_and_eval_agent, agent_statistics
 from omegaconf import OmegaConf
 import numpy as np
 import matplotlib.pyplot as plt
@@ -52,7 +52,6 @@ if __name__ == "__main__":
         all_score_matrices.append(asm)
             
         print("mean agent performance: ", np.mean(agent_performance[:, i]))
-
     plt.plot(nb_timesteps_list, agent_performance)
 
     
