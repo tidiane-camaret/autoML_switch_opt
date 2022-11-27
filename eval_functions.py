@@ -50,7 +50,7 @@ def eval_agent(env, policy, problem_list=None,  num_episodes=10, num_steps=5, ra
                 obj_values[episode, step] = info["obj_value"]
                 if done:
                     break
-        return obj_values, None , (beta1, beta2)
+        return obj_values, None , (beta1,beta2)
     
 
 
