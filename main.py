@@ -92,8 +92,8 @@ plt.fill_between(np.arange(len(obj_values[0])), np.mean(obj_values, axis=0) - np
 
 policy.learn(total_timesteps=agent_training_timesteps,progress_bar=True, eval_freq=1000, eval_log_path='tb_logs/agent_eval')
 
-#obj_values, np.array(trajectories), actions
-#trained_actions, trained_rewards, = eval_agent(test_env, policy, num_steps=model_training_steps)
+
+train_env.train_mode = False # remove train mode, avoids calculating the lookahead
 trained_obj_values, _ , trained_actions = eval_agent(test_env, policy, num_steps=model_training_steps)
 
 plt.plot(np.mean(trained_obj_values, axis=0), label='trained', alpha=0.7)

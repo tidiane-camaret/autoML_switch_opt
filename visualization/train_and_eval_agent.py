@@ -26,7 +26,7 @@ agent_training_timesteps = num_agent_runs * model_training_steps
 history_len = config.model.history_len
 
 # list of handcrafted optimizers
-optimizer_class_list = [torch.optim.SGD, torch.optim.Adam]
+optimizer_class_list = [torch.optim.SGD, torch.optim.Adam, torch.optim.RMSprop]
 
 # define the problem lists
 xlim = 2

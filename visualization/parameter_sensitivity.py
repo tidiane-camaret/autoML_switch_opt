@@ -20,7 +20,7 @@ if __name__ == "__main__":
 
     agent_performance = []
 
-    nb_timesteps_list = [25000, 50000, 75000, 100000]
+    nb_timesteps_list = [50000, 100000, 150000, 200000]
     nb_trials = 10
     
     all_optimizer_results = []
