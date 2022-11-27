@@ -6,13 +6,13 @@ import torchvision.datasets as datasets
 from torch.utils.data import DataLoader, RandomSampler, Subset
 import torchvision.transforms as transforms
 
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 def init_weights(m):
     # initialize weights of the model m
     if isinstance(m, nn.Linear):
         torch.nn.init.xavier_uniform_(m.weight)
         m.bias.data.fill_(0.01)
-
 
 class Variable(nn.Module):
     """A wrapper to turn a tensor of parameters into a module for optimization."""
@@ -23,13 +23,14 @@ class Variable(nn.Module):
         self.x = nn.Parameter(data)
 
 
+
 # define mlp_problem, but as a class
 class MLPProblemClass:
 
-    def __init__(self,
-                 num_vars=2,
-                 num_gaussians=4,
-                 num_samples=25, ):
+    def __init__(self, 
+                num_vars=2,
+                num_gaussians=4,
+                num_samples=25,):
 
         # generate list of random covariance matrices
 
@@ -44,8 +45,8 @@ class MLPProblemClass:
         gaussians = [
             torch.distributions.multivariate_normal.MultivariateNormal(
                 loc=torch.randn(num_vars),
-                # covariance_matrix=cov[i]
-                # covariance_matrix=torch.eye(num_vars) * torch.rand(1),
+                #covariance_matrix=cov[i]
+                #covariance_matrix=torch.eye(num_vars) * torch.rand(1),
                 scale_tril=trils[i],
             )
             for i in range(num_gaussians)
@@ -68,6 +69,8 @@ class MLPProblemClass:
         self.model0 = nn.Sequential(
             nn.Linear(num_vars, 2), nn.ReLU(), nn.Linear(2, 1), nn.Sigmoid()
         )
+        self.model0.device = device
+        print('print device is :  ',self.model.device)
 
         self.model0.apply(init_weights)
 
@@ -80,120 +83,122 @@ class MLPProblemClass:
         return F.binary_cross_entropy(y_hat, y) + 5e-4 / 2 * weight_norm
 
 
+
 # define rosenbrock problem as a class
 class RosenbrockProblem:
+    
+        def __init__(self, 
+                    x0=None,
+                    num_vars=2,     
+                    ):
+            if x0 is None:
+                x0 = torch.tensor([-1.5 if i % 2 == 0 else 1.5 for i in range(num_vars)], dtype=torch.float32, requires_grad=True)
+            else :
+                x0 = torch.tensor(x0, dtype=torch.float32, requires_grad=True)
+                
+            self.model0 = Variable(x0)
 
-    def __init__(self,
-                 x0=None,
-                 num_vars=2,
-                 ):
-        if x0 is None:
-            x0 = torch.tensor([-1.5 if i % 2 == 0 else 1.5 for i in range(num_vars)], dtype=torch.float32,
-                              requires_grad=True)
-        else:
-            x0 = torch.tensor(x0, dtype=torch.float32, requires_grad=True)
+        #def function_def(self, x):
+        #    return torch.sum(100.0 * (x[1:] - x[:-1] ** 2.0) ** 2.0 + (1 - x[:-1]) ** 2.0)
 
-        self.model0 = Variable(x0)
+        def function_def(self, x, y):
+            return (1-x)**2 + 100*(y-x**2)**2
 
-    # def function_def(self, x):
-    #    return torch.sum(100.0 * (x[1:] - x[:-1] ** 2.0) ** 2.0 + (1 - x[:-1]) ** 2.0)
-
-    def function_def(self, x, y):
-        return (1 - x) ** 2 + 100 * (y - x ** 2) ** 2
-
-    def obj_function(self, model):
-        x = model.x
-        return self.function_def(x[0], x[1])
-
-
+        def obj_function(self, model):
+            x = model.x
+            return self.function_def(x[0],x[1])
+    
 class SquareProblemClass:
+    
+        def __init__(self, 
+                    x0=0,
+                    scale=1,
+                    center=1
+                    ):
 
-    def __init__(self,
-                 x0=0,
-                 scale=1,
-                 center=1
-                 ):
-        x0 = torch.tensor([x0], dtype=torch.float32, requires_grad=True)
-        self.model0 = Variable(x0)
-        self.scale = scale
-        self.center = center
+            x0 = torch.tensor([x0], dtype=torch.float32, requires_grad=True)
+            self.model0 = Variable(x0)
+            self.scale = scale
+            self.center = center
 
-    def function_def(self, x):
-        return self.scale * (x - self.center) ** 2
+        def function_def(self, x):
+            return self.scale*(x-self.center)**2
 
-    def obj_function(self, model):
-        x = model.x
-        return self.function_def(x[0])
-
+        def obj_function(self, model):
+            x = model.x
+            return self.function_def(x[0])
 
 class NoisyHillsProblem:
 
-    def __init__(self,
-                 x0=[0, 0],
-                 scale=1,
-                 center=1
-                 ):
-        x0 = torch.tensor(x0, dtype=torch.float32, requires_grad=True)
-        self.model0 = Variable(x0)
-        self.scale = scale
-        self.center = center
+        def __init__(self, 
+                x0=[0,0],
+                scale=1,
+                center=1
+                ):
 
-    def function_def(self, x, y):
-        return -1 * torch.sin(x * x) * torch.cos(3 * y * y) * torch.exp(-(x * y) * (x * y)) - torch.exp(
-            -(x + y) * (x + y))
+            x0 = torch.tensor(x0, dtype=torch.float32, requires_grad=True)
+            self.model0 = Variable(x0)
+            self.scale = scale
+            self.center = center
 
-    def obj_function(self, model):
-        x = model.x
-        return self.function_def(x[0], x[1])
+        def function_def(self, x, y):
+            return -1 * torch.sin(x * x) * torch.cos(3 * y * y) * torch.exp(-(x * y) * (x * y)) - torch.exp(-(x + y) * (x + y))
+
+
+        def obj_function(self, model):
+            x = model.x
+            return self.function_def(x[0],x[1])
+           
 
 
 class RastriginProblem():
 
-    def __init__(self,
-                 x0=[0, 0],
-                 scale=1,
-                 center=1
-                 ):
+    def __init__(self, 
+                x0=[0,0],
+                scale=1,
+                center=1
+                ):
+
         x0 = torch.tensor(x0, dtype=torch.float32, requires_grad=True)
         self.model0 = Variable(x0)
         self.scale = scale
         self.center = center
 
     def function_def(self, x, y):
-        return 20 + x ** 2 - 10 * torch.cos(2 * np.pi * x) + y ** 2 - 10 * torch.cos(2 * np.pi * y)
+        return 20 + x**2 - 10*torch.cos(2*np.pi*x) + y**2 - 10*torch.cos(2*np.pi*y)
 
     def obj_function(self, model):
         x = model.x
-        return self.function_def(x[0], x[1])
+        return self.function_def(x[0],x[1])
 
 
 class AckleyProblem():
-    def __init__(self,
-                 x0=[0, 0],
-                 scale=1,
-                 center=1
-                 ):
+
+    def __init__(self, 
+                x0=[0,0],
+                scale=1,
+                center=1
+                ):
+
         x0 = torch.tensor(x0, dtype=torch.float32, requires_grad=True)
         self.model0 = Variable(x0)
         self.scale = scale
         self.center = center
 
     def function_def(self, x, y):
-        return -20 * torch.exp(-0.2 * torch.sqrt(0.5 * (x ** 2 + y ** 2))) - torch.exp(
-            0.5 * (torch.cos(2 * torch.pi * x) + torch.cos(2 * torch.pi * y))) + np.exp(1) + 20
+        return -20*torch.exp(-0.2*torch.sqrt(0.5*(x**2 + y**2))) - torch.exp(0.5*(torch.cos(2*torch.pi*x) + torch.cos(2*torch.pi*y))) + np.exp(1) + 20
 
     def obj_function(self, model):
         x = model.x
-        return self.function_def(x[0], x[1])
-
-
+        return self.function_def(x[0],x[1])
 class GaussianHillsProblem:
 
-    def __init__(self,
-                 x0=[0, 0],
-                 scale=1,
-                 center=1
-                 ):
+    def __init__(self, 
+            x0=[0,0],
+            scale=1,
+            center=1
+            ):
+
         x0 = torch.tensor(x0, dtype=torch.float32, requires_grad=True)
         self.model0 = Variable(x0)
         self.scale = scale
@@ -201,28 +206,65 @@ class GaussianHillsProblem:
 
     def fd(self, x, y, x_mean, y_mean, x_sig, y_sig):
         normalizing = 1 / (2 * torch.pi * x_sig * y_sig)
-        x_exp = (-1 * (x - x_mean) ** 2) / (2 * (x_sig) ** 2)
-        y_exp = (-1 * (y - y_mean) ** 2) / (2 * (y_sig) ** 2)
+        x_exp = (-1 * (x - x_mean)**2) / (2 * (x_sig)**2)
+        y_exp = (-1 * (y - y_mean)**2) / (2 * (y_sig)**2)
         return normalizing * torch.exp(x_exp + y_exp)
 
     def function_def(self, x, y):
-        # 3rd local minimum at (-0.5, -0.8)
+
         z = -1 * self.fd(x, y, x_mean=-0.5, y_mean=-0.8, x_sig=0.35, y_sig=0.35)
 
-        # one steep gaussian trench at (0, 0)
-        #     z -= __f2(x, y, x_mean=0, y_mean=0, x_sig=0.2, y_sig=0.2)
 
         # three steep gaussian trenches
-        z -= self.fd(x, y, x_mean=1.0, y_mean=-0.5, x_sig=0.2, y_sig=0.2)
+        z -= self.fd(x, y, x_mean=1.0, y_mean=-0.5, x_sig=0.1, y_sig=0.5)
         z -= self.fd(x, y, x_mean=-1.0, y_mean=0.5, x_sig=0.2, y_sig=0.2)
         z -= self.fd(x, y, x_mean=-0.5, y_mean=-0.8, x_sig=0.2, y_sig=0.2)
 
         return z
 
+
     def obj_function(self, model):
         x = model.x
-        return self.function_def(x[0], x[1])
+        return self.function_def(x[0],x[1])
 
+class NormProblem:
+
+    def __init__(self, 
+            x0=[0,0],
+            scale=1,
+            center=1
+            ):
+
+        x0 = torch.tensor(x0, dtype=torch.float32, requires_grad=True)
+        self.model0 = Variable(x0)
+        self.scale = scale
+        self.center = center
+
+    def function_def(self, x, y):
+        return torch.sqrt(x**2 + (1.1*y)**2)
+    def obj_function(self, model):
+        x = model.x
+        return self.function_def(x[0],x[1])
+
+class YNormProblem:
+
+    def __init__(self, 
+            x0=[0,0],
+            scale=1,
+            center=1
+            ):
+
+        x0 = torch.tensor(x0, dtype=torch.float32, requires_grad=True)
+        self.model0 = Variable(x0)
+        self.scale = scale
+        self.center = center
+
+    def function_def(self, x, y):
+        return torch.sqrt(y**2) * 10
+
+    def obj_function(self, model):
+        x = model.x
+        return self.function_def(x[0],x[1])
 
 class MNISTProblemClass:
 
