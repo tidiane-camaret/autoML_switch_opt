@@ -275,7 +275,6 @@ class MNISTProblemClass:
                  weights_flag=False
                  ):
 
-        # mnist_testset = datasets.MNIST(root='./data', train=False, download=True, transform=None)
 
         # maximum is 45
         self.batch_size = batch_size

@@ -186,7 +186,6 @@ class ModifiedAdam(Optimizer):
             max_exp_avg_sqs = []
             state_steps = []
             beta1, beta2, beta3, beta4 = group['betas']
-
             grad_scale = None
             found_inf = None
             if group['fused'] and grad_scaler is not None:

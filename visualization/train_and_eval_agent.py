@@ -270,7 +270,6 @@ def agent_statistics(results, params_dict, do_plot=True):
     for optimizer_name in optimizer_names:
         best_optimizer_count[optimizer_name] = np.sum(np.array(best_optimizer_list) == optimizer_name)
 
-
     plt.close('all')
     return best_optimizer_count, score_matrix
 

@@ -102,8 +102,6 @@ plt.fill_between(np.arange(len(rewards[0])), np.mean(rewards, axis=0) - np.std(r
 
 policy.learn(total_timesteps=agent_training_timesteps)
 
-
-#trained_rewards, _ , trained_actions = eval_agent(test_env, policy, problem_list=10, num_steps=model_training_steps)
 trained_rewards, _ , trained_actions = eval_agent(test_env, policy, num_steps=model_training_steps)
 
 if config.policy.optimization_mode == 'soft':

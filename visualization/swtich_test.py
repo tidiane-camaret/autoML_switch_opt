@@ -74,7 +74,6 @@ for step in range(num_steps):
             trained_optimizers_states[opt_class] = optimizer.state_dict()
 
         
-
     # get the optimizer to use
     if use_state_dict:
         optimizer = optimizer_class_list[actions[step]](model.parameters(), lr=config.model.lr)

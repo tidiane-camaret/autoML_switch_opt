@@ -4,7 +4,6 @@ import copy
 from environment import init_weights
 from omegaconf import OmegaConf
 
-
 config = OmegaConf.load('config.yaml')
 
 def eval_agent(env, policy, problem_list=None,  num_episodes=10, num_steps=5, random_actions=False):

@@ -21,7 +21,6 @@ plt.fill_between(np.arange(agent_performance.shape[1]),
                     agent_performance.mean(axis=0) + agent_performance.std(axis=0),
                     alpha=0.2)
 plt.show()
-
 #add labels
 plt.xlabel('number of timesteps')
 plt.ylabel('number of times agent was best optimizer')

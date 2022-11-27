@@ -53,7 +53,6 @@ if __name__ == "__main__":
         all_score_matrices.append(asm)
             
         print("mean agent performance: ", np.mean(agent_performance[:, i]))
-
     plt.plot(nb_timesteps_list, agent_performance)
 
     

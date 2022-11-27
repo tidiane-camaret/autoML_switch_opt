@@ -15,7 +15,6 @@ policy:
   exploration_fraction : 0.5
   optimization_mode : 'hard' # options:['soft', 'hard']
 
-
 environment:
   reward_system : "function" # options:['function', 'lookahead']  # info: Lookahead only for hard method.
   optimizer_storing : "dict" # options:['dict', optimizer_class']
