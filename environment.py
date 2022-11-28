@@ -7,8 +7,8 @@ from torch import nn
 import numpy as np
 from problem import Variable
 from omegaconf import OmegaConf
-
 from modifedAdam import ModifiedAdam
+
 from problem import Variable
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -61,7 +61,7 @@ class Environment(gym.Env):
         self.num_params = sum(p.numel() for p in self.model.parameters())
         self.reward_function = reward_function
         self.train_mode = True
-        self.optimizer = ModifiedAdam(self.model.parameters(), lr=config.model.lr)
+
 
 
 
@@ -107,6 +107,7 @@ class Environment(gym.Env):
                 self.trained_optimizers_states[key] = optimizer_init.state_dict()
 
         else:
+            
             optimizer_init = ModifiedAdam(self.model.parameters(),
                                           lr=self.config.model.lr)  # torch.optim.RMSprop(self.model.parameters(),lr=self.config.model.lr)
             self.optimizer = optimizer_init
@@ -138,6 +139,10 @@ class Environment(gym.Env):
             # update the model and
             # calculate the new objective value
             with torch.enable_grad():
+                if isinstance(self.model, Variable):
+                    traj_position = copy.deepcopy(self.model).x.detach().numpy()
+                else:
+                    traj_position = None
                 obj_value = self.objective_function(self.model)
                 self.optimizer.zero_grad()
                 obj_value.backward()
@@ -145,36 +150,7 @@ class Environment(gym.Env):
                 self.optimizer.step()
                 # optimizer.zero_grad()
             # add the updated optimizer into list
-            # self.trained_optimizers[optimizer_class] = optimizer.state_dict()
-
-            # print(opt_s)
-
-            # Calculate the current gradient and flatten it
-            current_grad = torch.cat(
-                [p.grad.flatten() for p in self.model.parameters()]
-            ).flatten()
-
-            # Update history of objective values and gradients with current objective
-            # value and gradient.
-            if len(self.obj_values) >= self.history_len:
-                self.obj_values.pop(-1)
-                self.gradients.pop(-1)
-            self.obj_values.insert(0, obj_value)
-            self.gradients.insert(0, current_grad)
-
-            # Return observation, reward, done, and empty info
-            observation = make_observation(
-                obj_value.item(),
-                self.obj_values,
-                self.gradients,
-                self.num_params,
-                self.history_len,
-            )
-            observation.flatten()
-            obj_value = obj_value.item()
-            reward = self.reward_function(obj_value)
-            done = self.current_step >= self.num_steps
-            info ={"obj_value" : obj_value}
+ 
 
         else:
             lookahead_obj_values = np.zeros(len(self.optimizer_class_list))
@@ -250,44 +226,45 @@ class Environment(gym.Env):
             elif config.environment.optimizer_storing_method == "class_dict":
                 self.trained_optimizers[self.optimizer_class_list[action]] = optimizer
 
-            # Calculate the current gradient and flatten it
-            current_grad = torch.cat(
-                [p.grad.flatten() for p in self.model.parameters()]
-            ).flatten()
+        # Calculate the current gradient and flatten it
+        current_grad = torch.cat(
+            [p.grad.flatten() for p in self.model.parameters()]
+        ).flatten()
 
-            # Update history of objective values and gradients with current objective
-            # value and gradient.
-            if len(self.obj_values) >= self.history_len:
-                self.obj_values.pop(-1)
-                self.gradients.pop(-1)
-            self.obj_values.insert(0, obj_value)
-            self.gradients.insert(0, current_grad)
+        # Update history of objective values and gradients with current objective
+        # value and gradient.
+        if len(self.obj_values) >= self.history_len:
+            self.obj_values.pop(-1)
+            self.gradients.pop(-1)
+        self.obj_values.insert(0, obj_value)
+        self.gradients.insert(0, current_grad)
 
-            # Return observation, reward, done, and empty info
-            observation = make_observation(
-                obj_value.item(),
-                self.obj_values,
-                self.gradients,
-                self.num_params,
-                self.history_len,
-            )
+        # Return observation, reward, done, and empty info
+        observation = make_observation(
+            obj_value.item(),
+            self.obj_values,
+            self.gradients,
+            self.num_params,
+            self.history_len,
+        )
 
-            #observation = np.ndarray.flatten(observation)
+        #observation = np.ndarray.flatten(observation)
 
 
-            obj_value = obj_value.item()
-            self.obj_values_sum += obj_value
+        obj_value = obj_value.item()
+        self.obj_values_sum += obj_value
 
-            if self.config.environment.reward_system == "lookahead":
-                reward = 1 if action == np.argmin(lookahead_obj_values) else 0
-            elif self.config.environment.reward_system == "function":
-                reward = self.reward_function(obj_value)
-            else:
-                raise NotImplementedError
-            
-            done = self.current_step >= self.num_steps
+        if self.config.environment.reward_system == "lookahead":
+            reward = 1 if action == np.argmin(lookahead_obj_values) else 0
+        elif self.config.environment.reward_system == "function":
+            reward = self.reward_function(obj_value)
+        else:
+            raise NotImplementedError
+        
+        done = self.current_step >= self.num_steps
 
-            info = {"obj_value" : obj_value,
-                    "traj_position" : traj_position}
+        info = {"obj_value" : obj_value,
+                "traj_position" : traj_position}
         self.current_step += 1
+
         return observation, reward, done, info

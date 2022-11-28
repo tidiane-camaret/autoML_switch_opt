@@ -6,9 +6,10 @@ import os, pickle
 from problem import NoisyHillsProblem, GaussianHillsProblem, RosenbrockProblem\
     ,RastriginProblem, SquareProblemClass, AckleyProblem, NormProblem, \
         YNormProblem
-import matplotlib
-matplotlib.use('Agg')
-from matplotlib import pyplot as plt
+#import matplotlib
+#matplotlib.use('Agg')
+#from matplotlib import pyplot as plt
+import matplotlib.pyplot as plt
 import numpy as np
 from eval_functions import eval_agent, eval_handcrafted_optimizer
 import torch
@@ -69,8 +70,15 @@ def train_and_eval_agent(problemclass1, problemclass2, agent_training_timesteps,
                             )
     check_env(train_env, warn=True)
 
-    policy = stable_baselines3.DQN('MlpPolicy', train_env, verbose=0, #exploration_fraction=config.policy.exploration_fraction,
-                                    tensorboard_log='tb_logs/single_problem_gaussian_hills_dqn')
+    # define the agent
+    if config.policy.model == 'PPO' or config.policy.optimization_mode == "soft":
+        policy = stable_baselines3.PPO('MlpPolicy', train_env, verbose=0,
+                                    tensorboard_log='tb_logs/norm')
+
+    elif config.policy.model == 'DQN':
+        policy = stable_baselines3.DQN('MlpPolicy', train_env, verbose=0,
+                                    exploration_fraction=config.policy.exploration_fraction,
+                                    tensorboard_log='tb_logs/norm')
 
     # define the results dictionary
     results = {}
@@ -129,7 +137,8 @@ def train_and_eval_agent(problemclass1, problemclass2, agent_training_timesteps,
     return results, params_dict
 
 def agent_statistics(results, params_dict, do_plot=True):
-    
+
+
     test_starting_points = params_dict['test_starting_points']
     threshold = params_dict['threshold']
     X, Y, Z = params_dict['meshgrid']
@@ -138,9 +147,9 @@ def agent_statistics(results, params_dict, do_plot=True):
 
     # calculate a score matrix storing the mean objective value for each optimizer
     score_matrix = np.zeros((nb_test_points, len(results.keys())))
-    for i in range(nb_test_points):
-        for j, optimizer_name in enumerate(results.keys()):
-            obj_values = results[optimizer_name]['obj_values']
+    for j, optimizer_name in enumerate(results.keys()):
+        obj_values = results[optimizer_name]['obj_values']
+        for i in range(nb_test_points):
             #score_matrix[i, j] = first_index_below_threshold(obj_values[i], threshold)
             score_matrix[i, j] = np.mean(obj_values[i][:])
 
@@ -199,26 +208,29 @@ def agent_statistics(results, params_dict, do_plot=True):
     #analyze the actions taken by the agent
     optimizer_name = "agent"
     actions = results[optimizer_name]['actions']
+    print("actions shape", actions.shape)
     trajectories = results[optimizer_name]['trajectories']
 
-    # put all actions in a single array and plot the matrix 
-    fig, ax = plt.subplots(1,2,figsize=(10, 10))
-    ax[0].imshow(actions)
-    ax[0].set_title('actions taken by the agent')
-    ax[0].set_xlabel('step')
-    ax[0].set_ylabel('starting point')
+    for beta_idx in range(actions.shape[-1]):
+        beta = actions[:, :, beta_idx]
+        # put all actions in a single array and plot the matrix 
+        fig, ax = plt.subplots(1,2,figsize=(10, 10))
+        ax[0].imshow(beta)
+        ax[0].set_title('actions taken by the agent')
+        ax[0].set_xlabel('step')
+        ax[0].set_ylabel('starting point')
 
 
-    # on the problem surface, plot agent actions for each starting point
-    ax[1].contourf(X, Y, Z, 50, cmap="gray")
-    ax[1].set_title('Agent actions for each starting point')
-    ax[1].set_xlabel('x')
-    ax[1].set_ylabel('y')
-    for i in range(nb_test_points):
-        ax[1].scatter(trajectories[i][:, 0], trajectories[i][:, 1], c=actions[i,:], s=1)
-    plt.savefig("visualization/graphs/agent_actions.png")
-    if do_plot:
-        plt.show()
+        # on the problem surface, plot agent actions for each starting point
+        ax[1].contourf(X, Y, Z, 50, cmap="gray")
+        ax[1].set_title('Agent actions for each starting point')
+        ax[1].set_xlabel('x')
+        ax[1].set_ylabel('y')
+        for i in range(nb_test_points):
+            ax[1].scatter(trajectories[i][:, 0], trajectories[i][:, 1], c=beta[i,:], s=1)
+        plt.savefig("visualization/graphs/agent_actions.png")
+        if do_plot:
+            plt.show()
 
     optimizer_names = list(results.keys())  
     """
@@ -277,8 +289,8 @@ def agent_statistics(results, params_dict, do_plot=True):
 
 if __name__ == "__main__":
 
-    problemclass1 = GaussianHillsProblem
-    problemclass2 = GaussianHillsProblem
+    problemclass1 = NormProblem
+    problemclass2 = AckleyProblem
 
     filename = "visualization/graphs/"\
                 + problemclass1.__name__\

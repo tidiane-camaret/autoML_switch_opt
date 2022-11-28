@@ -1,7 +1,7 @@
 model:
   num_problems : 1000
-  num_agent_runs : 1000
-  model_training_steps : 250
+  num_agent_runs : 10 
+  model_training_steps : 100
   history_len: 25
   epochs : 10
   lr : 0.01
@@ -13,8 +13,8 @@ problem : 'SquareProblem' #options:['MNIST', 'SquareProblem', 'AckleyProblem', '
 policy:
   model: 'DQN' # options:['DQN', 'PPO']  info: DQN for hard method, PPO for soft method.
   exploration_fraction : 0.5
-  optimization_mode : 'hard' # options:['soft', 'hard']
+  optimization_mode : 'soft' # options:['soft', 'hard']
 
 environment:
   reward_system : "function" # options:['function', 'lookahead']  # info: Lookahead only for hard method.
-  optimizer_storing : "dict" # options:['dict', optimizer_class']
+  optimizer_storing_method : "state_dict" # options:['dict', optimizer_class']

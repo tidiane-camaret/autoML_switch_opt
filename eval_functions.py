@@ -7,16 +7,17 @@ from omegaconf import OmegaConf
 config = OmegaConf.load('config.yaml')
 
 def eval_agent(env, policy, problem_list=None,  num_episodes=10, num_steps=5, random_actions=False):
-    if config.policy.optimization_mode == 'hard':
+    if True:
         if problem_list is None:
             problem_list = env.problem_list
 
-        actions = np.zeros((len(problem_list), num_steps))
-        obj_values = np.zeros((len(problem_list), num_steps))
+        actions = []
         trajectories = []
+        obj_values = np.zeros((len(problem_list), num_steps))
 
         for episode, problem in enumerate(problem_list):
             t = []
+            a = []
             obs = env.reset(problem=problem)
             for step in range(num_steps):
                 if random_actions:
@@ -24,33 +25,14 @@ def eval_agent(env, policy, problem_list=None,  num_episodes=10, num_steps=5, ra
                 else:
                     action, _states = policy.predict(obs)
                 obs, reward, done, info = env.step(action)
-                actions[episode, step] = action
                 obj_values[episode, step] = info["obj_value"]
+                a.append(action)
                 t.append(info["traj_position"])
                 if done:
                     break
             trajectories.append(t)
-        return obj_values, np.array(trajectories), actions
-
-    else :
-        obj_values =  np.zeros(( num_episodes, num_steps))
-        beta1, beta2, rewards = np.zeros(( num_episodes, num_steps)), np.zeros(
-            (num_episodes, num_steps)), np.zeros(( num_episodes, num_steps))
-            #, np.zeros((num_episodes, num_steps)), np.zeros(
-            #(num_episodes, num_steps))
-        for episode in range(num_episodes):
-            obs = env.reset()
-            for step in range(num_steps):
-                action, _states = policy.predict(obs)
-                obs, reward, done, info = env.step(action)
-                beta1[episode, step] = action[0]
-                beta2[episode, step] = action[1]
-
-                obj_values[episode, step] = info["obj_value"]
-                if done:
-                    break
-        return obj_values, None , (beta1,beta2)
-    
+            actions.append(a)
+        return obj_values, np.array(trajectories), np.array(actions)
 
 
 

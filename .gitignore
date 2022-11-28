@@ -20,3 +20,4 @@ __pycache__/environment.cpython-310.pyc
 src.egg-info/
 visualization/graphs/
 *.pkl
+Beta1.png

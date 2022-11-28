@@ -5,7 +5,7 @@ from problem import NoisyHillsProblem, GaussianHillsProblem, RosenbrockProblem\
         YNormProblem
 import torch
 from environment import Environment
-from eval_functions import eval_agent, eval_handcrafted_optimizer, eval_switcher_optimizer, first_index_below_threshold
+from eval_functions import eval_agent, eval_handcrafted_optimizer
 import stable_baselines3
 from eval_functions import eval_agent
 import numpy as np
@@ -64,13 +64,15 @@ check_env(train_env, warn=True)
 check_env(test_env, warn=True)
 
 # define the agent
-if config.policy.model == 'DQN':
+if config.policy.model == 'PPO' or config.policy.optimization_mode == "soft":
+    policy = stable_baselines3.PPO('MlpPolicy', train_env, verbose=0,
+                                   tensorboard_log='tb_logs/norm')
+
+elif config.policy.model == 'DQN':
     policy = stable_baselines3.DQN('MlpPolicy', train_env, verbose=0,
                                    exploration_fraction=config.policy.exploration_fraction,
                                    tensorboard_log='tb_logs/norm')
-elif config.policy.model == 'PPO':
-    policy = stable_baselines3.PPO('MlpPolicy', train_env, verbose=0,
-                                   tensorboard_log='tb_logs/norm')
+
 else:
     print('policy is not selected, it is set DQN')
     policy = stable_baselines3.DQN('MlpPolicy', train_env, verbose=0,
@@ -116,7 +118,7 @@ plt.plot(np.mean(rewards_adam, axis=0), label="Adam", alpha=0.7, color='green', 
 plt.plot(np.mean(rewards_rmsprop, axis=0), label="RMSprop", alpha=0.7, color='blue', ls='--')
 plt.legend()
 plt.show()
-plt.savefig('eval.png')
+plt.savefig('graphs/eval.png')
 plt.close()
 
 #plt.plot(np.mean(actions[0], axis=0), label='actions')
@@ -124,14 +126,14 @@ if config.policy.optimization_mode == 'soft':
   plt.plot(np.mean(trained_beta1, axis=0), label='trained_actions')
   plt.legend()
   plt.show()
-  plt.savefig('Beta1.png')
+  plt.savefig('graphs/Beta1.png')
   plt.close()
 
 
   plt.plot(np.mean(trained_beta2, axis=0), label='trained_actions')
   plt.legend()
   plt.show()
-  plt.savefig('Beta2.png')
+  plt.savefig('graphs/Beta2.png')
   plt.close()
 
 if config.policy.optimization_mode == 'hard':
@@ -139,5 +141,5 @@ if config.policy.optimization_mode == 'hard':
   plt.plot(np.mean(trained_actions, axis=0), label='trained_actions')
   plt.legend()
   plt.show()
-  plt.savefig('trained_actions.png')
+  plt.savefig('graphs/trained_actions.png')
   plt.close()
