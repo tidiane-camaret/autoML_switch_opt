@@ -5,7 +5,7 @@ from problem import NoisyHillsProblem, GaussianHillsProblem, RosenbrockProblem\
         YNormProblem
 import torch
 from environment import Environment
-from eval_functions import eval_agent, eval_handcrafted_optimizer, eval_switcher_optimizer, first_index_below_threshold
+from eval_functions import eval_agent, eval_handcrafted_optimizer
 import stable_baselines3
 from eval_functions import eval_agent
 import numpy as np
@@ -22,6 +22,7 @@ num_agent_runs = config.model.num_agent_runs
 model_training_steps = config.model.model_training_steps
 
 agent_training_timesteps = num_agent_runs * model_training_steps
+
 # define the problem list
 
 
@@ -63,16 +64,21 @@ check_env(train_env, warn=True)
 check_env(test_env, warn=True)
 
 # define the agent
-if config.policy.model == 'DQN':
-    policy = stable_baselines3.DQN('MlpPolicy', train_env, verbose=0, #exploration_fraction=config.policy.exploration_fraction,
-                                   tensorboard_log='tb_logs/norm')
-elif config.policy.model == 'PPO':
+if config.policy.model == 'PPO' or config.policy.optimization_mode == "soft":
     policy = stable_baselines3.PPO('MlpPolicy', train_env, verbose=0,
                                    tensorboard_log='tb_logs/norm')
+
+elif config.policy.model == 'DQN':
+    policy = stable_baselines3.DQN('MlpPolicy', train_env, verbose=0,
+                                   exploration_fraction=config.policy.exploration_fraction,
+                                   tensorboard_log='tb_logs/norm')
+
 else:
     print('policy is not selected, it is set DQN')
-    policy = stable_baselines3.DQN('MlpPolicy', train_env, verbose=0, exploration_fraction=config.policy.exploration_fraction,
+    policy = stable_baselines3.DQN('MlpPolicy', train_env, verbose=0,
+                                   exploration_fraction=config.policy.exploration_fraction,
                                    tensorboard_log='tb_logs/norm')
+
 actions, obj_values = [], []
 epochs = config.model.epochs
 for _ in range(epochs):
@@ -80,7 +86,7 @@ for _ in range(epochs):
     test_env.reset()
     for _ in range(model_training_steps):
         action = test_env.action_space.sample()
-        obs, _, _, info = test_env.step(action)
+        obs, reward, _, info = test_env.step(action)
         actions_.append(action)
         obj_values_.append(info["obj_value"])
     actions.append(actions_)
@@ -92,25 +98,48 @@ plt.fill_between(np.arange(len(obj_values[0])), np.mean(obj_values, axis=0) - np
 
 policy.learn(total_timesteps=agent_training_timesteps,progress_bar=True, eval_freq=1000, eval_log_path='tb_logs/agent_eval')
 
+trained_rewards, _ , trained_actions = eval_agent(test_env, policy, num_steps=model_training_steps)
 
-train_env.train_mode = False # remove train mode, avoids calculating the lookahead
-trained_obj_values, _ , trained_actions = eval_agent(test_env, policy, num_steps=model_training_steps)
-
-plt.plot(np.mean(trained_obj_values, axis=0), label='trained', alpha=0.7)
-plt.fill_between(np.arange(len(trained_obj_values[0])), np.mean(trained_obj_values, axis=0) - np.std(trained_obj_values, axis=0),
-                 np.mean(trained_obj_values, axis=0) + np.std(trained_obj_values, axis=0), alpha=0.2)
+if config.policy.optimization_mode == 'soft':
+  trained_beta1, trained_beta2 = trained_actions[0], trained_actions[1]
+plt.plot(np.mean(trained_rewards, axis=0), label='trained', alpha=0.7)
+plt.fill_between(np.arange(len(trained_rewards[0])), np.mean(trained_rewards, axis=0) - np.std(trained_rewards, axis=0),
+                 np.mean(trained_rewards, axis=0) + np.std(trained_rewards, axis=0), alpha=0.2)
 
 # evaluate the handcrafted optimizers
-for h_opt in optimizer_class_list:
-    obj_values, trajectories = eval_handcrafted_optimizer(test_problem_list, h_opt, model_training_steps,
+rewards_sgd, trajectories_sgd = eval_handcrafted_optimizer(test_problem_list, torch.optim.SGD, model_training_steps,
                                          do_init_weights=False, config=config)
-    plt.plot(np.mean(obj_values, axis=0), label=h_opt.__name__, alpha=0.7, ls='--')
-    plt.legend()
-plt.show()
-
-
-#print(trained_actions)
-plt.plot(np.mean(actions, axis=0), label='actions')
-plt.plot(np.mean(trained_actions, axis=0), label='trained_actions')
+rewards_adam, trajectories_adam = eval_handcrafted_optimizer(test_problem_list, torch.optim.Adam, model_training_steps,
+                                          do_init_weights=False, config=config)
+rewards_rmsprop, trajectories_rmsprop = eval_handcrafted_optimizer(test_problem_list, torch.optim.RMSprop, model_training_steps,
+                                             do_init_weights=False, config=config)
+plt.plot(np.mean(rewards_sgd, axis=0), label="SGD", alpha=0.7, color='red', ls='--')
+plt.plot(np.mean(rewards_adam, axis=0), label="Adam", alpha=0.7, color='green', ls='--')
+plt.plot(np.mean(rewards_rmsprop, axis=0), label="RMSprop", alpha=0.7, color='blue', ls='--')
 plt.legend()
 plt.show()
+plt.savefig('graphs/eval.png')
+plt.close()
+
+#plt.plot(np.mean(actions[0], axis=0), label='actions')
+if config.policy.optimization_mode == 'soft':
+  plt.plot(np.mean(trained_beta1, axis=0), label='trained_actions')
+  plt.legend()
+  plt.show()
+  plt.savefig('graphs/Beta1.png')
+  plt.close()
+
+
+  plt.plot(np.mean(trained_beta2, axis=0), label='trained_actions')
+  plt.legend()
+  plt.show()
+  plt.savefig('graphs/Beta2.png')
+  plt.close()
+
+if config.policy.optimization_mode == 'hard':
+  plt.plot(np.mean(actions, axis=0), label='actions')
+  plt.plot(np.mean(trained_actions, axis=0), label='trained_actions')
+  plt.legend()
+  plt.show()
+  plt.savefig('graphs/trained_actions.png')
+  plt.close()

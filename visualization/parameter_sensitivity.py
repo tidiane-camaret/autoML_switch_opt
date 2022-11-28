@@ -2,7 +2,7 @@ import os, pickle
 from problem import NoisyHillsProblem, GaussianHillsProblem, RosenbrockProblem\
     ,RastriginProblem, SquareProblemClass, AckleyProblem, NormProblem, \
         YNormProblem
-from train_and_eval_agent import train_and_eval_agent, agent_statistics
+from visualization.train_and_eval_agent import train_and_eval_agent, agent_statistics
 from omegaconf import OmegaConf
 import numpy as np
 import matplotlib.pyplot as plt
@@ -20,7 +20,7 @@ if __name__ == "__main__":
 
     agent_performance = []
 
-    nb_timesteps_list = [50000, 100000, 150000, 200000]
+    nb_timesteps_list = [1000, 5000, 10000, 50000, 100000]
     nb_trials = 10
     
     all_optimizer_results = []
@@ -38,21 +38,27 @@ if __name__ == "__main__":
             agent_performance[trial, i] = best_optimizer_count["agent"]
             aor.append(best_optimizer_count)
             asm.append(score_matrix)
+            
             # save the results
-            with open('visualization/agent_performance.pkl', 'wb') as f:
+
+            filename = "visualization/parameter_sensitivity_results/"\
+                #+ problemclass1.__name__\
+                #+ "_" + problemclass2.__name__\
+                #+ "_" + config.policy.optimization_mode 
+
+            with open(filename + 'agent_performance.pkl', 'wb') as f:
                 pickle.dump(agent_performance, f)
             # save all_optimizer_results
-            with open('visualization/all_optimizer_results.pkl', 'wb') as f:
+            with open(filename + 'all_optimizer_results.pkl', 'wb') as f:
                 pickle.dump(all_optimizer_results, f)
             # save all_score_matrices
-            with open('visualization/all_score_matrices.pkl', 'wb') as f:
+            with open(filename + 'all_score_matrices.pkl', 'wb') as f:
                 pickle.dump(all_score_matrices, f)
 
         all_optimizer_results.append(aor)
         all_score_matrices.append(asm)
             
         print("mean agent performance: ", np.mean(agent_performance[:, i]))
-
-    plt.plot(nb_timesteps_list, agent_performance)
+    plt.plot(nb_timesteps_list, np.mean(agent_performance, axis=0))
 
     
