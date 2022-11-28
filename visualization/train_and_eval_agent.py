@@ -211,8 +211,12 @@ def agent_statistics(results, params_dict, do_plot=True):
     print("actions shape", actions.shape)
     trajectories = results[optimizer_name]['trajectories']
 
-    for beta_idx in range(actions.shape[-1]):
-        beta = actions[:, :, beta_idx]
+    # if actions has 2 dims, expand it to 3 dims
+    if len(actions.shape) == 2:
+        actions = np.expand_dims(actions, axis=2)
+
+    for actions_coeff_idx in range(actions.shape[-1]):
+        beta = actions[:, :, actions_coeff_idx]
         # put all actions in a single array and plot the matrix 
         fig, ax = plt.subplots(1,2,figsize=(10, 10))
         ax[0].imshow(beta)
@@ -295,6 +299,7 @@ if __name__ == "__main__":
     filename = "visualization/graphs/"\
                 + problemclass1.__name__\
                 + "_" + problemclass2.__name__\
+                + config.policy.optimization_mode \
                 + "_results.pkl"
 
     #if file already exists, load it
