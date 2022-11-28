@@ -22,9 +22,12 @@ agent_training_timesteps = num_agent_runs * model_training_steps
 
 # define the problem list
 if config.problem == 'MNIST':
-  mnist_clasess = ([0,1],[4,5],[6,7],[8,9])
-  train_problem_list = [MNISTProblemClass(classes = random.choice(mnist_clasess)) for _ in range(num_problems)]
+  train_problem_list = [MNISTProblemClass(classes =[0,1]) for _ in range(num_problems)]
   test_problem_list = [MNISTProblemClass(classes = [2,3])]
+# if config.problem == 'MNIST':
+#   mnist_clasess = ([0,1],[2,3],[6,7],[8,9])
+#   train_problem_list = [MNISTProblemClass(classes = random.choice(mnist_clasess)) for _ in range(num_problems)]
+#   test_problem_list = [MNISTProblemClass(classes = [4,5])]
 
 elif config.problem == 'SquareProblem':
   starting_points = np.arange(-0.5, -0.25, 0.01)
@@ -100,15 +103,15 @@ plt.plot(np.mean(rewards, axis=0), label='untrained', alpha=0.7)
 plt.fill_between(np.arange(len(rewards[0])), np.mean(rewards, axis=0) - np.std(rewards, axis=0),
                  np.mean(rewards, axis=0) + np.std(rewards, axis=0), alpha=0.2)
 
-policy.learn(total_timesteps=agent_training_timesteps)
+# policy.learn(total_timesteps=agent_training_timesteps)
 
-trained_rewards, _ , trained_actions = eval_agent(test_env, policy, num_steps=model_training_steps)
+# trained_rewards, _ , trained_actions = eval_agent(test_env, policy, num_steps=model_training_steps)
 
-if config.policy.optimization_mode == 'soft':
-  trained_beta1, trained_beta2 = trained_actions[0], trained_actions[1]
-plt.plot(np.mean(trained_rewards, axis=0), label='trained', alpha=0.7)
-plt.fill_between(np.arange(len(trained_rewards[0])), np.mean(trained_rewards, axis=0) - np.std(trained_rewards, axis=0),
-                 np.mean(trained_rewards, axis=0) + np.std(trained_rewards, axis=0), alpha=0.2)
+# if config.policy.optimization_mode == 'soft':
+#   trained_beta1, trained_beta2 = trained_actions[0], trained_actions[1]
+# plt.plot(np.mean(trained_rewards, axis=0), label='trained', alpha=0.7)
+# plt.fill_between(np.arange(len(trained_rewards[0])), np.mean(trained_rewards, axis=0) - np.std(trained_rewards, axis=0),
+#                  np.mean(trained_rewards, axis=0) + np.std(trained_rewards, axis=0), alpha=0.2)
 
 # evaluate the handcrafted optimizers
 rewards_sgd, trajectories_sgd = eval_handcrafted_optimizer(test_problem_list, torch.optim.SGD, model_training_steps,
@@ -125,25 +128,24 @@ plt.show()
 plt.savefig('eval.png')
 plt.close()
 
-#plt.plot(np.mean(actions[0], axis=0), label='actions')
-if config.policy.optimization_mode == 'soft':
-  plt.plot(np.mean(trained_beta1, axis=0), label='trained_actions')
-  plt.legend()
-  plt.show()
-  plt.savefig('Beta1.png')
-  plt.close()
+# if config.policy.optimization_mode == 'soft':
+#   plt.plot(np.mean(trained_beta1, axis=0), label='trained_actions')
+#   plt.legend()
+#   plt.show()
+#   plt.savefig('Beta1.png')
+#   plt.close()
 
 
-  plt.plot(np.mean(trained_beta2, axis=0), label='trained_actions')
-  plt.legend()
-  plt.show()
-  plt.savefig('Beta2.png')
-  plt.close()
+#   plt.plot(np.mean(trained_beta2, axis=0), label='trained_actions')
+#   plt.legend()
+#   plt.show()
+#   plt.savefig('Beta2.png')
+#   plt.close()
 
-if config.policy.optimization_mode == 'hard':
-  plt.plot(np.mean(actions, axis=0), label='actions')
-  plt.plot(np.mean(trained_actions, axis=0), label='trained_actions')
-  plt.legend()
-  plt.show()
-  plt.savefig('trained_actions.png')
-  plt.close()
+# if config.policy.optimization_mode == 'hard':
+#   plt.plot(np.mean(actions, axis=0), label='actions')
+#   plt.plot(np.mean(trained_actions, axis=0), label='trained_actions')
+#   plt.legend()
+#   plt.show()
+#   plt.savefig('trained_actions.png')
+#   plt.close()

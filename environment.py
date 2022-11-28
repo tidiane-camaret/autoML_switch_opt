@@ -7,7 +7,7 @@ from torch import nn
 from modifedAdam import ModifiedAdam
 from problem import Variable
 
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def init_weights(m):
