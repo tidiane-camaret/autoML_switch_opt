@@ -28,7 +28,10 @@ X, Y = np.meshgrid(x, y)
 X, Y = torch.tensor(X), torch.tensor(Y)
 Z = problem.function_def(X, Y)
 Z = Z.detach().numpy()
-optimizer_class_list = [torch.optim.SGD, torch.optim.Adam, ModifiedAdam]
+optimizer_class_list = [torch.optim.SGD, \
+                        torch.optim.Adam, \
+                        torch.optim.RMSprop, \
+                        ModifiedAdam]
 
 
 trajectory = []

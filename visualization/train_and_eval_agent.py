@@ -6,10 +6,7 @@ import os, pickle
 from problem import NoisyHillsProblem, GaussianHillsProblem, RosenbrockProblem\
     ,RastriginProblem, SquareProblemClass, AckleyProblem, NormProblem, \
         YNormProblem
-#import matplotlib
-#matplotlib.use('Agg')
-#from matplotlib import pyplot as plt
-import matplotlib.pyplot as plt
+
 import numpy as np
 from eval_functions import eval_agent, eval_handcrafted_optimizer
 import torch
@@ -27,7 +24,7 @@ agent_training_timesteps = num_agent_runs * model_training_steps
 history_len = config.model.history_len
 
 # list of handcrafted optimizers
-optimizer_class_list = [torch.optim.SGD, torch.optim.Adam]
+optimizer_class_list = [torch.optim.SGD, torch.optim.Adam, torch.optim.RMSprop]
 
 # define the problem lists
 xlim = 2
@@ -96,8 +93,9 @@ def train_and_eval_agent(problemclass1, problemclass2, agent_training_timesteps,
         results[optimizer_name]['obj_values'] = obj_values
         results[optimizer_name]['trajectories'] = trajectories
 
-
+    
     # evaluate a switcher optimizer
+    """
     for switch_time in [0.5]:
         optimizer_name = 'switcher_' + str(switch_time)
         results[optimizer_name] = {}
@@ -112,7 +110,7 @@ def train_and_eval_agent(problemclass1, problemclass2, agent_training_timesteps,
 
         results[optimizer_name]['obj_values'] = obj_values
         results[optimizer_name]['trajectories'] = trajectories
-
+    """
     # train and evaluate the agent
     policy.learn(total_timesteps=agent_training_timesteps, progress_bar=True,eval_freq=1000, eval_log_path='tb_logs/single_problem_gaussian_hills_dqn_eval')
     optimizer_name = 'agent'
@@ -121,11 +119,27 @@ def train_and_eval_agent(problemclass1, problemclass2, agent_training_timesteps,
     obj_values, trajectories, actions = eval_agent(train_env, 
                                                     policy, 
                                                     problem_list=test_problem_list, 
-                                                    num_steps=model_training_steps, 
+                                                    num_steps=model_training_steps,
                                                     )
     results[optimizer_name]['obj_values'] = obj_values
     results[optimizer_name]['trajectories'] = trajectories
     results[optimizer_name]['actions'] = actions
+
+    # EVALUATE A RANDOM AGENT
+    """
+    optimizer_name = 'agent_random'
+    results[optimizer_name] = {}
+    train_env.train_mode = False # remove train mode, avoids calculating the lookahead
+    obj_values, trajectories, actions = eval_agent(train_env, 
+                                                    policy, 
+                                                    problem_list=test_problem_list, 
+                                                    num_steps=model_training_steps,
+                                                    random_actions=True 
+                                                    )
+    results[optimizer_name]['obj_values'] = obj_values
+    results[optimizer_name]['trajectories'] = trajectories
+    results[optimizer_name]['actions'] = actions
+    """
 
     params_dict = {
         'test_starting_points': test_starting_points,
@@ -137,6 +151,12 @@ def train_and_eval_agent(problemclass1, problemclass2, agent_training_timesteps,
     return results, params_dict
 
 def agent_statistics(results, params_dict, do_plot=True):
+    if do_plot:
+        import matplotlib.pyplot as plt
+    else :
+        import matplotlib
+        matplotlib.use('Agg')
+        from matplotlib import pyplot as plt
 
 
     test_starting_points = params_dict['test_starting_points']
@@ -293,10 +313,10 @@ def agent_statistics(results, params_dict, do_plot=True):
 
 if __name__ == "__main__":
 
-    problemclass1 = NormProblem
-    problemclass2 = AckleyProblem
+    problemclass1 = GaussianHillsProblem
+    problemclass2 = GaussianHillsProblem
 
-    filename = "visualization/graphs/"\
+    filename = "visualization/result_dicts/"\
                 + problemclass1.__name__\
                 + "_" + problemclass2.__name__\
                 + config.policy.optimization_mode \
