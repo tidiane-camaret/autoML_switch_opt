@@ -3,10 +3,9 @@ evaluate an handcrafted and an agent based optimizer on a given problem list
 extract the rewart, action and trajectory for each optimizer
 """
 import os, pickle
-from problem import NoisyHillsProblem, GaussianHillsProblem, RosenbrockProblem\
-    ,RastriginProblem, SquareProblemClass, AckleyProblem, NormProblem, \
-        YNormProblem
-
+from problem import NoisyHillsProblem, GaussianHillsProblem,\
+     RastriginProblem, AckleyProblem, NormProblem
+     
 import numpy as np
 from eval_functions import eval_agent, eval_handcrafted_optimizer
 import torch
@@ -15,6 +14,7 @@ from eval_functions import first_index_below_threshold
 from environment import Environment
 from stable_baselines3.common.env_checker import check_env
 import stable_baselines3
+import random
 
 # general parameters
 config = OmegaConf.load('config.yaml')
@@ -36,7 +36,7 @@ def train_and_eval_agent(problemclass_train, problemclass_eval, agent_training_t
     
     if problemclass_train == "all_except_eval":
         problemclass_train_list = all_problems_class_list.remove(problemclass_eval)
-        train_problem_list = [np.random.choice(problemclass_train_list)(x0=np.random.uniform(-xlim, xlim, size=(2))) for _ in range(nb_train_points)]
+        train_problem_list = [random.choice(problemclass_train_list)(x0=np.random.uniform(-xlim, xlim, size=(2))) for _ in range(nb_train_points)]
     
     elif problemclass_train == "none":
         # if none, pick a class at random. will not be used for training
