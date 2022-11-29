@@ -35,7 +35,9 @@ nb_test_points = 1000
 def train_and_eval_agent(problemclass_train, problemclass_eval, agent_training_timesteps, do_plot=True):
     
     if problemclass_train == "all_except_eval":
-        problemclass_train_list = all_problems_class_list.remove(problemclass_eval)
+        problemclass_train_list = all_problems_class_list
+        problemclass_train_list.remove(problemclass_eval)
+        print("problemclass_train_list: ", problemclass_train_list)
         train_problem_list = [random.choice(problemclass_train_list)(x0=np.random.uniform(-xlim, xlim, size=(2))) for _ in range(nb_train_points)]
     
     elif problemclass_train == "none":

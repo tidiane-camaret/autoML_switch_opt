@@ -2,7 +2,7 @@ from problem import NoisyHillsProblem, GaussianHillsProblem,\
      RastriginProblem, AckleyProblem, NormProblem
 from visualization.train_and_eval_agent import train_and_eval_agent, agent_statistics, get_problem_name
 from omegaconf import OmegaConf
-
+import time
 import wandb
 
 
@@ -33,6 +33,8 @@ if __name__ == "__main__":
         for i, nb_timesteps in enumerate(nb_timesteps_list):
 
             for trial in range(nb_trials):
+                time_start = time.time()
+
 
                 run = wandb.init(reinit=True, 
                                 project="switching_optimizers", 
@@ -51,7 +53,11 @@ if __name__ == "__main__":
                     wandb.log({"agent_count": best_optimizer_count["agent"],
                                 "all_optimizer_count": best_optimizer_count,
                                 "all_trajectories": results,
-                               "score_matrix": score_matrix,})    
+                               "score_matrix": score_matrix,})  
+
+                time_end = time.time()
+                print("time elapsed: ", time_end - time_start)
+
 
 
 
