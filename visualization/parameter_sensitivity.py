@@ -17,20 +17,15 @@ agent_training_timesteps = num_agent_runs * model_training_steps
 
 if __name__ == "__main__":
 
-    problemclass_train_list = ["none"]
+    problemclass_train_list = ["all_except_eval"]
     problemclass_eval_list = [GaussianHillsProblem, NoisyHillsProblem, RastriginProblem, AckleyProblem, NormProblem]
 
     # every possible pair of problemclass 
     problemclass_pairs = [(train, eval) for train in problemclass_train_list for eval in problemclass_eval_list]
 
-    #agent_performance = []
-
     nb_timesteps_list = [100000]
     nb_trials = 5
     
-    #all_optimizer_results = []
-    #all_score_matrices = []
-    #agent_performance = np.zeros((nb_trials, len(nb_timesteps_list)))
 
     for (problemclass_train, problemclass_eval) in problemclass_pairs:
 
@@ -58,35 +53,7 @@ if __name__ == "__main__":
                                 "all_optimizer_count": best_optimizer_count,
                                 "all_trajectories": results,
                                "score_matrix": score_matrix,})    
-            
-            
-            """
-                print("agent performance: ", best_optimizer_count["agent"])
-                #agent_performance[trial, i] = best_optimizer_count["agent"]
-                #aor.append(best_optimizer_count)
-                #asm.append(score_matrix)
-                
-                # save the results
 
-                filename = "visualization/parameter_sensitivity_results/"\
-                    #+ problemclass1.__name__\
-                    #+ "_" + problemclass2.__name__\
-                    #+ "_" + config.policy.optimization_mode 
-
-                with open(filename + 'agent_performance.pkl', 'wb') as f:
-                    pickle.dump(agent_performance, f)
-                # save all_optimizer_results
-                with open(filename + 'all_optimizer_results.pkl', 'wb') as f:
-                    pickle.dump(all_optimizer_results, f)
-                # save all_score_matrices
-                with open(filename + 'all_score_matrices.pkl', 'wb') as f:
-                    pickle.dump(all_score_matrices, f)
-
-            all_optimizer_results.append(aor)
-            all_score_matrices.append(asm)
-                
-            print("mean agent performance: ", np.mean(agent_performance[:, i]))
-            """
 
 
     
