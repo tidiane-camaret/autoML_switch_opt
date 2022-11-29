@@ -2,7 +2,7 @@ import os, pickle
 from problem import NoisyHillsProblem, GaussianHillsProblem, RosenbrockProblem\
     ,RastriginProblem, SquareProblemClass, AckleyProblem, NormProblem, \
         YNormProblem
-from visualization.train_and_eval_agent import train_and_eval_agent, agent_statistics
+from visualization.train_and_eval_agent import train_and_eval_agent, agent_statistics, get_problem_name
 from omegaconf import OmegaConf
 import numpy as np
 import matplotlib.pyplot as plt
@@ -17,16 +17,16 @@ agent_training_timesteps = num_agent_runs * model_training_steps
 
 if __name__ == "__main__":
 
-    problemclass_train_list = [GaussianHillsProblem]
-    problemclass_eval_list = [GaussianHillsProblem]
+    problemclass_train_list = ["none"]
+    problemclass_eval_list = [GaussianHillsProblem, NoisyHillsProblem, RastriginProblem, AckleyProblem, NormProblem]
 
     # every possible pair of problemclass 
     problemclass_pairs = [(train, eval) for train in problemclass_train_list for eval in problemclass_eval_list]
 
     #agent_performance = []
 
-    nb_timesteps_list = [1000, 5000, 10000, 50000, 100000]
-    nb_trials = 1
+    nb_timesteps_list = [100000]
+    nb_trials = 5
     
     #all_optimizer_results = []
     #all_score_matrices = []
@@ -42,8 +42,8 @@ if __name__ == "__main__":
 
                 run = wandb.init(reinit=True, 
                                 project="switching_optimizers", 
-                                config={"problemclass_train": problemclass_train.__name__,
-                                        "problemclass_eval": problemclass_eval.__name__,
+                                config={"problemclass_train": get_problem_name(problemclass_train),
+                                        "problemclass_eval": get_problem_name(problemclass_eval),
                                         "nb_timesteps": nb_timesteps, 
                                         "optimization_mode" : config.policy.optimization_mode, 
                                         "reward_system": config.environment.reward_system,

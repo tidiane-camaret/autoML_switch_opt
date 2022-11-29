@@ -32,19 +32,29 @@ nb_train_points = config.model.num_problems
 nb_test_points = 100
 
 
-def train_and_eval_agent(problemclass1, problemclass2, agent_training_timesteps, do_plot=True):
+def train_and_eval_agent(problemclass_train, problemclass_eval, agent_training_timesteps, do_plot=True):
+    
+    if problemclass_train == "all":
+        problemclass_train_list = [NoisyHillsProblem, GaussianHillsProblem, RosenbrockProblem, RastriginProblem, SquareProblemClass, AckleyProblem, NormProblem, YNormProblem]
+        train_problem_list = [np.random.choice(problemclass_train_list)(x0=np.random.uniform(-xlim, xlim, size=(2))) for _ in range(nb_train_points)]
+    
+    elif problemclass_train == "none":
+        # if none, pick a class at random. will not be used for training
+        train_starting_points = np.random.uniform(-xlim, xlim, size=(nb_train_points, 2))
+        train_problem_list = [NoisyHillsProblem(x0=xi) for xi in train_starting_points]
+    else : 
+        train_starting_points = np.random.uniform(-xlim, xlim, size=(nb_train_points, 2))
+        train_problem_list = [problemclass_train(x0=xi) for xi in train_starting_points]
 
-    train_starting_points = np.random.uniform(-xlim, xlim, size=(nb_train_points, 2))
-    train_problem_list = [problemclass1(x0=xi) for xi in train_starting_points]
     test_starting_points = np.random.uniform(-xlim, xlim, size=(nb_test_points, 2))
-    test_problem_list = [problemclass2(x0=xi) for xi in test_starting_points]
+    test_problem_list = [problemclass_eval(x0=xi) for xi in test_starting_points]
 
     # meshgrid for plotting the problem surface
     x = np.arange(-xlim, xlim, xlim / 100)
     y = np.arange(-xlim, xlim, xlim / 100)
     X, Y = np.meshgrid(x, y)
     X, Y = torch.tensor(X), torch.tensor(Y)
-    Z = problemclass2().function_def(X, Y)
+    Z = problemclass_eval().function_def(X, Y)
     Z = Z.detach().numpy()
 
     # calculate minimum of the problem surface
@@ -112,7 +122,8 @@ def train_and_eval_agent(problemclass1, problemclass2, agent_training_timesteps,
         results[optimizer_name]['trajectories'] = trajectories
     """
     # train and evaluate the agent
-    policy.learn(total_timesteps=agent_training_timesteps, progress_bar=True,eval_freq=1000, eval_log_path='tb_logs/single_problem_gaussian_hills_dqn_eval')
+    if problemclass_train != "none":
+        policy.learn(total_timesteps=agent_training_timesteps, progress_bar=True,eval_freq=1000, eval_log_path='tb_logs/single_problem_gaussian_hills_dqn_eval')
     optimizer_name = 'agent'
     results[optimizer_name] = {}
     train_env.train_mode = False # remove train mode, avoids calculating the lookahead
@@ -120,6 +131,7 @@ def train_and_eval_agent(problemclass1, problemclass2, agent_training_timesteps,
                                                     policy, 
                                                     problem_list=test_problem_list, 
                                                     num_steps=model_training_steps,
+                                                    random_actions=(problemclass_train == "none"), 
                                                     )
     results[optimizer_name]['obj_values'] = obj_values
     results[optimizer_name]['trajectories'] = trajectories
@@ -311,14 +323,22 @@ def agent_statistics(results, params_dict, do_plot=True):
     plt.close('all')
     return best_optimizer_count, score_matrix
 
+
+def get_problem_name(problemclass):
+    return problemclass.__name__ if isinstance(problemclass, type) else problemclass
+
+
 if __name__ == "__main__":
 
-    problemclass1 = GaussianHillsProblem
-    problemclass2 = GaussianHillsProblem
+    problemclass_train = RastriginProblem
+    problemclass_eval = AckleyProblem
+
+    problemclass_eval_name = problemclass_eval.__name__ if isinstance(problemclass_eval, type) else problemclass_eval
+    problemclass_train_name = problemclass_train.__name__ if isinstance(problemclass_train, type) else problemclass_train
 
     filename = "visualization/result_dicts/"\
-                + problemclass1.__name__\
-                + "_" + problemclass2.__name__\
+                + problemclass_train_name\
+                + "_" + problemclass_eval_name\
                 + config.policy.optimization_mode \
                 + "_results.pkl"
 
@@ -329,7 +349,7 @@ if __name__ == "__main__":
 
     #else, run the experiment and save the results
     else:
-        results, params_dict = train_and_eval_agent(problemclass1, problemclass2, agent_training_timesteps)
+        results, params_dict = train_and_eval_agent(problemclass_train, problemclass_eval, agent_training_timesteps)
         with open(filename, 'wb') as f:
             pickle.dump((results, params_dict), f)
 
