@@ -1,11 +1,8 @@
-import os, pickle
-from problem import NoisyHillsProblem, GaussianHillsProblem, RosenbrockProblem\
-    ,RastriginProblem, SquareProblemClass, AckleyProblem, NormProblem, \
-        YNormProblem
+from problem import NoisyHillsProblem, GaussianHillsProblem,\
+     RastriginProblem, AckleyProblem, NormProblem
 from visualization.train_and_eval_agent import train_and_eval_agent, agent_statistics, get_problem_name
 from omegaconf import OmegaConf
-import numpy as np
-import matplotlib.pyplot as plt
+
 import wandb
 
 
@@ -13,12 +10,14 @@ config = OmegaConf.load('config.yaml')
 num_agent_runs = config.model.num_agent_runs
 model_training_steps = config.model.model_training_steps
 agent_training_timesteps = num_agent_runs * model_training_steps
-
+all_problems_class_list = [NoisyHillsProblem, GaussianHillsProblem, RastriginProblem, AckleyProblem, NormProblem]
 
 if __name__ == "__main__":
 
+
+
     problemclass_train_list = ["all_except_eval"]
-    problemclass_eval_list = [GaussianHillsProblem, NoisyHillsProblem, RastriginProblem, AckleyProblem, NormProblem]
+    problemclass_eval_list = all_problems_class_list
 
     # every possible pair of problemclass 
     problemclass_pairs = [(train, eval) for train in problemclass_train_list for eval in problemclass_eval_list]
@@ -30,9 +29,7 @@ if __name__ == "__main__":
     for (problemclass_train, problemclass_eval) in problemclass_pairs:
 
         for i, nb_timesteps in enumerate(nb_timesteps_list):
-            #print(nb_timesteps)
-            #aor = []
-            #asm = []
+
             for trial in range(nb_trials):
 
                 run = wandb.init(reinit=True, 
