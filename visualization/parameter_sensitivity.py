@@ -25,15 +25,20 @@ if __name__ == "__main__":
     nb_timesteps_list = [100000]
     nb_trials = 5
     
+    
 
     for (problemclass_train, problemclass_eval) in problemclass_pairs:
-        print("problemclass_train: ", problemclass_train)
-        print("problemclass_eval: ", problemclass_eval)
+
 
         for i, nb_timesteps in enumerate(nb_timesteps_list):
 
             for trial in range(nb_trials):
+                
+                print("Trial: ", trial)
                 time_start = time.time()
+
+                print("problemclass_train: ", problemclass_train)
+                print("problemclass_eval: ", problemclass_eval)
 
 
                 run = wandb.init(reinit=True, 
