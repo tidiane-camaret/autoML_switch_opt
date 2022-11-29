@@ -5,7 +5,7 @@ extract the rewart, action and trajectory for each optimizer
 import os, pickle
 from problem import NoisyHillsProblem, GaussianHillsProblem,\
      RastriginProblem, AckleyProblem, NormProblem
-     
+
 import numpy as np
 from eval_functions import eval_agent, eval_handcrafted_optimizer
 import torch

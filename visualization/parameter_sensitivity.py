@@ -27,6 +27,8 @@ if __name__ == "__main__":
     
 
     for (problemclass_train, problemclass_eval) in problemclass_pairs:
+        print("problemclass_train: ", problemclass_train)
+        print("problemclass_eval: ", problemclass_eval)
 
         for i, nb_timesteps in enumerate(nb_timesteps_list):
 
