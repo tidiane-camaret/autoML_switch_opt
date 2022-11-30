@@ -1,5 +1,5 @@
 import random
-
+import wandb
 from problem import NoisyHillsProblem, GaussianHillsProblem, RosenbrockProblem\
     ,RastriginProblem, SquareProblemClass, AckleyProblem, NormProblem, \
         YNormProblem, MNISTProblemClass
@@ -12,10 +12,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 from stable_baselines3.common.env_checker import check_env
 from omegaconf import OmegaConf
+from collections import Counter
+
 
 config = OmegaConf.load('config.yaml')
-# number of problems to train on
-num_problems = config.model.num_problems
+tb_log_dir = 'tb_logs/'+config.problem+' '+config.policy.optimization_mode
 # number of agent training episodes
 num_agent_runs = config.model.num_agent_runs
 # number of steps in each episode
@@ -26,10 +27,9 @@ history_len = config.model.history_len
 
 
 # define the problem list
-nb_train_points = num_problems
 nb_test_points = 100
 
-### specific for math problems
+### parameters specific to math problems
 math_problem_train_class = NoisyHillsProblem
 math_problem_eval_class = GaussianHillsProblem
 
@@ -37,12 +37,12 @@ xlim = 2
 
 
 if config.problem == 'MNIST':
-  train_problem_list = [MNISTProblemClass(classes =[0,1]) for _ in range(num_problems)]
-  test_problem_list = [MNISTProblemClass(classes = [2,3]) for _ in range(nb_test_points)]
+  train_problem_list = [MNISTProblemClass(classes =[0,1])]# for _ in range(num_agent_runs)]
+  test_problem_list = [MNISTProblemClass(classes = [0,1]) for _ in range(nb_test_points)]
 
 elif config.problem == 'MathProblem':
   train_problem_list = [math_problem_train_class(x0=np.random.uniform(-xlim, xlim, size=(2))) 
-                        for _ in range(num_problems)]
+                        for _ in range(num_agent_runs)]
   test_problem_list = [math_problem_eval_class(x0=np.random.uniform(-xlim, xlim, size=(2))) 
                         for _ in range(nb_test_points)]
 
@@ -60,22 +60,45 @@ train_env = Environment(config=config,
                             optimizer_class_list=optimizer_class_list,
                             reward_function=reward_function
                             )
+
 # sanity check for the environment
 check_env(train_env, warn=True)
 
 # define the agent
 if config.policy.model == 'PPO' or config.policy.optimization_mode == "soft":
-    policy = stable_baselines3.PPO('MlpPolicy', train_env, verbose=0,)
+    policy = stable_baselines3.PPO('MlpPolicy',
+                                   train_env, 
+                                   verbose=0,
+                                   tensorboard_log=tb_log_dir)
 
 elif config.policy.model == 'DQN':
-    policy = stable_baselines3.DQN('MlpPolicy', train_env, verbose=0,
-                                   exploration_fraction=config.policy.exploration_fraction,)
+    policy = stable_baselines3.DQN('MlpPolicy', 
+                                  train_env, 
+                                  verbose=0,
+                                   exploration_fraction=config.policy.exploration_fraction,
+                                   tensorboard_log=tb_log_dir)
 
 else:
     print('policy is not selected, it is set DQN')
-    policy = stable_baselines3.DQN('MlpPolicy', train_env, verbose=0,
-                                   exploration_fraction=config.policy.exploration_fraction,)
+    policy = stable_baselines3.DQN('MlpPolicy', 
+                                    train_env, 
+                                    verbose=0,
+                                   exploration_fraction=config.policy.exploration_fraction,
+                                   tensorboard_log=tb_log_dir)
 
+
+
+
+run = wandb.init(reinit=True, 
+                                project="switching_optimizers", 
+                                group = "main",
+                                config={"problem": config.problem,
+                                        "nb_timesteps": agent_training_timesteps, 
+                                        "optimization_mode" : config.policy.optimization_mode, 
+                                        "reward_system": config.environment.reward_system,
+                                        "history_len": config.model.history_len,
+                                        "lr": config.model.lr,
+                                        "exploration_fraction": config.policy.exploration_fraction})
 
 
 optimizers_trajectories = {}
@@ -98,7 +121,7 @@ for optimizer_class in optimizer_class_list:
 policy.learn(total_timesteps=agent_training_timesteps, 
             progress_bar=True,
             eval_freq=1000, 
-            eval_log_path='tb_logs/'+config.problem+' '+config.policy.optimization_mode)
+            eval_log_path=tb_log_dir)
 
 # evaluate the agent
 train_env.train_mode = False # remove train mode, avoids calculating the lookahead
@@ -109,7 +132,7 @@ obj_values, trajectories, actions = eval_agent(train_env,
                                                 policy, 
                                                 problem_list=test_problem_list, 
                                                 num_steps=model_training_steps,
-                                                random_actions=False, 
+                                                random_actions=False,
                                                 )
 optimizers_trajectories['agent']['obj_values'] = obj_values
 optimizers_trajectories['agent']['trajectories'] = trajectories
@@ -123,7 +146,7 @@ obj_values, trajectories, actions = eval_agent(train_env,
                                                 policy, 
                                                 problem_list=test_problem_list, 
                                                 num_steps=model_training_steps,
-                                                random_actions=False, 
+                                                random_actions=False,
                                                 )
 optimizers_trajectories['random_agent']['obj_values'] = obj_values
 optimizers_trajectories['random_agent']['trajectories'] = trajectories
@@ -131,16 +154,10 @@ optimizers_trajectories['random_agent']['actions'] = actions
 
 
 
-# plot mean objective value for each optimizer on the same plot
-plt.figure(figsize=(10, 6))
-for optimizer_name, optimizer_trajectories in optimizers_trajectories.items():
-    obj_values = optimizer_trajectories['obj_values']
-    plt.plot(np.mean(obj_values, axis=0), label=optimizer_name)
-plt.legend()
-plt.show()
 
 
-# calculate a score matrix storing the mean objective value for each optimizer
+# calculate a score matrix storing the aera under the curve for each optimizer
+# and each starting point
 score_matrix = np.zeros((nb_test_points, len(optimizers_trajectories.keys())))
 for j, optimizer_name in enumerate(optimizers_trajectories.keys()):
     obj_values = optimizers_trajectories[optimizer_name]['obj_values']
@@ -148,7 +165,19 @@ for j, optimizer_name in enumerate(optimizers_trajectories.keys()):
         #score_matrix[i, j] = first_index_below_threshold(obj_values[i], threshold)
         score_matrix[i, j] = np.mean(obj_values[i][:])
 
-# list of best optimizers for each starting point. if the agent is in a tie with a handcrafted optimizer, the agent wins
+
+# plot the histogram of the scores for each optimizer
+fig, ax = plt.subplots(1, 1, figsize=(8, 6))
+for j, optimizer_name in enumerate(optimizers_trajectories.keys()):
+    ax.hist(score_matrix[:, j], bins=100, label=optimizer_name, alpha=0.5)
+ax.legend()
+ax.set_xlabel('mean objective value')
+ax.set_ylabel('number of test points')
+ax.set_title('Histogram of the mean objective value for each optimizer')
+
+
+# list of best optimizers for each starting point. 
+# if the agent is in a tie with a handcrafted optimizer, the agent wins
 best_optimizer_list = []
 for i in range(nb_test_points):
     best_score = np.inf
@@ -159,12 +188,24 @@ for i in range(nb_test_points):
             best_optimizer = optimizer_name
     best_optimizer_list.append(best_optimizer)
 
+print("agent wins {} times".format(best_optimizer_list.count('agent')))
+
+# plot mean objective value for each optimizer on the same plot
+plt.figure(figsize=(10, 6))
+for optimizer_name, optimizer_trajectories in optimizers_trajectories.items():
+    obj_values = optimizer_trajectories['obj_values']
+    plt.plot(np.mean(obj_values, axis=0), label=optimizer_name)
+plt.legend()
+plt.show()
+
+
 
 # get indices where the agent is the best optimizer
 plotted_starting_points = [i for i, x in enumerate(best_optimizer_list) if x == "agent"]
 if len(plotted_starting_points) < 10:
     plotted_starting_points.extend(random.sample(range(nb_test_points), 10-len(plotted_starting_points)))
-
+else:
+    plotted_starting_points = plotted_starting_points[:10]
 
 # for each starting point, plot the objective values of every optimizer
 fig, axs = plt.subplots(2, 5, figsize=(20, 10))
@@ -179,11 +220,28 @@ for i, starting_point in enumerate(plotted_starting_points):
 plt.show()
 
 
+#analyze the actions taken by the agent
+actions = optimizers_trajectories["agent"]['actions']
+
+# if actions has 2 dims, expand it to 3 dims
+if len(actions.shape) == 2:
+    actions = np.expand_dims(actions, axis=2)
+
+for actions_coeff_idx in range(actions.shape[-1]):
+    beta = actions[:, :, actions_coeff_idx]
+    # put all actions in a single array and plot the matrix 
+    fig, ax = plt.subplots(1,figsize=(10, 10))
+    ax.imshow(beta)
+    ax.set_title('actions taken by the agent')
+    ax.set_xlabel('step')
+    ax.set_ylabel('starting point')
+
+optimizers_scores = {}
+for optimizer_name in optimizers_trajectories.keys():
+    optimizers_scores[optimizer_name] = np.mean(np.array(best_optimizer_list) == optimizer_name)
+wandb.log({"optimizers_scores":optimizers_scores})
 
 
-
-
-print("agent wins {} times".format(best_optimizer_list.count('agent')))
 
 """
 
@@ -215,27 +273,4 @@ plt.legend()
 plt.show()
 plt.savefig('graphs/eval.png')
 plt.close()
-
-#plt.plot(np.mean(actions[0], axis=0), label='actions')
-if config.policy.optimization_mode == 'soft':
-  plt.plot(np.mean(trained_beta1, axis=0), label='trained_actions')
-  plt.legend()
-  plt.show()
-  plt.savefig('graphs/Beta1.png')
-  plt.close()
-
-
-  plt.plot(np.mean(trained_beta2, axis=0), label='trained_actions')
-  plt.legend()
-  plt.show()
-  plt.savefig('graphs/Beta2.png')
-  plt.close()
-
-if config.policy.optimization_mode == 'hard':
-  plt.plot(np.mean(actions, axis=0), label='actions')
-  plt.plot(np.mean(trained_actions, axis=0), label='trained_actions')
-  plt.legend()
-  plt.show()
-  plt.savefig('graphs/trained_actions.png')
-  plt.close()
 """

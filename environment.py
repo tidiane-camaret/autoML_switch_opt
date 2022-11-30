@@ -17,7 +17,7 @@ config = OmegaConf.load('config.yaml')
 
 def init_weights(m):
     # initialize weights of the model m
-    if isinstance(m, nn.Linear):
+    if isinstance(m, nn.Linear) or isinstance(m, nn.Conv2d):
         torch.nn.init.xavier_uniform_(m.weight)
         m.bias.data.fill_(0.01)
 
@@ -71,7 +71,7 @@ class Environment(gym.Env):
         if config.policy.optimization_mode == 'hard':
             self.action_space = spaces.Discrete(len(self.optimizer_class_list))
         elif config.policy.optimization_mode == 'soft':
-            self.action_space = spaces.Box(low=np.array([0.01, 0.01]), high=np.array([0.999, 0.999]))#(low=np.array([0.01, 0.998]), high=np.array([0.999, 0.999])
+            self.action_space = spaces.Box(low=np.array([0.01, 0.998]), high=np.array([0.999, 0.999]))
         else:
             print('mode of optimization is not set properly. Deufalut is hard')
             self.action_space = spaces.Discrete(len(self.optimizer_class_list))
