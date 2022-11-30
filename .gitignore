@@ -22,3 +22,4 @@ visualization/graphs/
 *.pkl
 Beta1.png
 wandb/
+data/MNIST/

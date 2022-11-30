@@ -22,7 +22,7 @@ if __name__ == "__main__":
     # every possible pair of problemclass 
     problemclass_pairs = [(train, eval) for train in problemclass_train_list for eval in problemclass_eval_list]
 
-    nb_timesteps_list = [1, 1000, 10000, 100000]
+    nb_timesteps_list = [1, 100000]
     nb_trials = 5
     
     
@@ -30,9 +30,9 @@ if __name__ == "__main__":
     for (problemclass_train, problemclass_eval) in problemclass_pairs:
 
 
-        for i, nb_timesteps in enumerate(nb_timesteps_list):
-
-            for trial in range(nb_trials):
+        for trial in range(nb_trials):        
+                
+            for i, nb_timesteps in enumerate(nb_timesteps_list):
                 
                 print("Trial: ", trial)
                 time_start = time.time()

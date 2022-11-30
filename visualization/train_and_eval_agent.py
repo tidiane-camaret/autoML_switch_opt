@@ -77,7 +77,6 @@ def train_and_eval_agent(problemclass_train, problemclass_eval, agent_training_t
                             history_len=history_len,
                             optimizer_class_list=optimizer_class_list,
                             reward_function=reward_function
-                            
                             )
     check_env(train_env, warn=True)
 
