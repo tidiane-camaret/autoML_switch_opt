@@ -12,7 +12,7 @@ problem : 'SquareProblem' #options:['MNIST', 'SquareProblem', 'AckleyProblem', '
 
 policy:
   model: 'DQN' # options:['DQN', 'PPO']  info: DQN for hard method, PPO for soft method.
-  exploration_fraction : 0.5
+  exploration_fraction : 0.1
   optimization_mode : 'soft' # options:['soft', 'hard']
 
 environment:

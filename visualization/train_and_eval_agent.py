@@ -30,7 +30,7 @@ all_problems_class_list = [NoisyHillsProblem, GaussianHillsProblem, RastriginPro
 # define the problem lists
 xlim = 2
 nb_train_points = config.model.num_problems
-nb_test_points = 1000
+nb_test_points = 500
 
 
 def train_and_eval_agent(problemclass_train, problemclass_eval, agent_training_timesteps, do_plot=True):
@@ -64,7 +64,7 @@ def train_and_eval_agent(problemclass_train, problemclass_eval, agent_training_t
     # calculate minimum of the problem surface
     # and determine the threshold for the reward function
     function_min = np.min(Z)
-    print('test function minimum: ', function_min)
+    #print('test function minimum: ', function_min)
     threshold = function_min + 0.001
 
 
@@ -322,7 +322,7 @@ def agent_statistics(results, params_dict, do_plot=True):
     # count the number of times each optimizer is the best
     best_optimizer_count = {}
     for optimizer_name in optimizer_names:
-        best_optimizer_count[optimizer_name] = np.sum(np.array(best_optimizer_list) == optimizer_name)
+        best_optimizer_count[optimizer_name] = np.mean(np.array(best_optimizer_list) == optimizer_name)
 
     plt.close('all')
     return best_optimizer_count, score_matrix
