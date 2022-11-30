@@ -16,13 +16,13 @@ if __name__ == "__main__":
 
 
 
-    problemclass_train_list = all_problems_class_list + ["none","all_except_eval"]
-    problemclass_eval_list = all_problems_class_list
+    problemclass_train_list = [GaussianHillsProblem] #all_problems_class_list + ["none","all_except_eval"]
+    problemclass_eval_list = [NoisyHillsProblem] #all_problems_class_list
 
     # every possible pair of problemclass 
     problemclass_pairs = [(train, eval) for train in problemclass_train_list for eval in problemclass_eval_list]
 
-    nb_timesteps_list = [10000]
+    nb_timesteps_list = [1, 1000, 10000, 100000]
     nb_trials = 5
     
     
@@ -43,7 +43,7 @@ if __name__ == "__main__":
 
                 run = wandb.init(reinit=True, 
                                 project="switching_optimizers", 
-                                group = "generalization_hard_lookahead",
+                                group = "generalization_hard_with_all_betas",
                                 config={"problemclass_train": get_problem_name(problemclass_train),
                                         "problemclass_eval": get_problem_name(problemclass_eval),
                                         "nb_timesteps": nb_timesteps, 
