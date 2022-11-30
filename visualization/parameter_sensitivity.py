@@ -43,7 +43,7 @@ if __name__ == "__main__":
 
                 run = wandb.init(reinit=True, 
                                 project="switching_optimizers", 
-                                group = "generalization_soft",
+                                group = "generalization_hard_lookahead",
                                 config={"problemclass_train": get_problem_name(problemclass_train),
                                         "problemclass_eval": get_problem_name(problemclass_eval),
                                         "nb_timesteps": nb_timesteps, 

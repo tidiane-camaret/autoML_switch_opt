@@ -202,31 +202,29 @@ def agent_statistics(results, params_dict, do_plot=True):
 
     # plot matrix values as lines, sorted by best optimizer
     score_matrix_sorted = score_matrix[score_matrix[:, -1].argsort()]
-
-    fig, ax = plt.subplots(1,2,figsize=(10, 10))
-    for i, optimizer_name in enumerate(results.keys()):
-        ax[0].plot(score_matrix_sorted[:, i], label=optimizer_name, alpha=0.7)
-    ax[0].legend()
-    ax[0].set_xlabel('starting point')
-    ax[0].set_ylabel('score')
-    ax[0].set_title('score for each starting point and optimizer')
-
-
-    # plot the best optimizer for each starting point on the problem surface. 
-
-    ax[1].contourf(X, Y, Z, 50, cmap="gray")
-    ax[1].set_title('Best optimizer for each starting point')
-    ax[1].set_xlabel('x')
-    ax[1].set_ylabel('y')
-    #loop through unique best optimizers
-    for optimizer_name in np.unique(best_optimizer_list):
-        # get the starting points for which the optimizer is the best
-        idx = np.array(best_optimizer_list) == optimizer_name
-        # plot the starting points
-        ax[1].scatter(test_starting_points[idx, 0], test_starting_points[idx, 1], label=optimizer_name)
-    ax[1].legend()
-
     if do_plot:
+        fig, ax = plt.subplots(1,2,figsize=(10, 10))
+        for i, optimizer_name in enumerate(results.keys()):
+            ax[0].plot(score_matrix_sorted[:, i], label=optimizer_name, alpha=0.7)
+        ax[0].legend()
+        ax[0].set_xlabel('starting point')
+        ax[0].set_ylabel('score')
+        ax[0].set_title('score for each starting point and optimizer')
+
+
+        # plot the best optimizer for each starting point on the problem surface. 
+
+        ax[1].contourf(X, Y, Z, 50, cmap="gray")
+        ax[1].set_title('Best optimizer for each starting point')
+        ax[1].set_xlabel('x')
+        ax[1].set_ylabel('y')
+        #loop through unique best optimizers
+        for optimizer_name in np.unique(best_optimizer_list):
+            # get the starting points for which the optimizer is the best
+            idx = np.array(best_optimizer_list) == optimizer_name
+            # plot the starting points
+            ax[1].scatter(test_starting_points[idx, 0], test_starting_points[idx, 1], label=optimizer_name)
+        ax[1].legend()
         plt.show()
 
     # plot the objective values for each starting point and optimizer
@@ -241,35 +239,36 @@ def agent_statistics(results, params_dict, do_plot=True):
     if do_plot:
         plt.show()
     """
-    #analyze the actions taken by the agent
-    optimizer_name = "agent"
-    actions = results[optimizer_name]['actions']
-    print("actions shape", actions.shape)
-    trajectories = results[optimizer_name]['trajectories']
+    if do_plot:
+        #analyze the actions taken by the agent
+        optimizer_name = "agent"
+        actions = results[optimizer_name]['actions']
 
-    # if actions has 2 dims, expand it to 3 dims
-    if len(actions.shape) == 2:
-        actions = np.expand_dims(actions, axis=2)
+        trajectories = results[optimizer_name]['trajectories']
 
-    for actions_coeff_idx in range(actions.shape[-1]):
-        beta = actions[:, :, actions_coeff_idx]
-        # put all actions in a single array and plot the matrix 
-        fig, ax = plt.subplots(1,2,figsize=(10, 10))
-        ax[0].imshow(beta)
-        ax[0].set_title('actions taken by the agent')
-        ax[0].set_xlabel('step')
-        ax[0].set_ylabel('starting point')
+        # if actions has 2 dims, expand it to 3 dims
+        if len(actions.shape) == 2:
+            actions = np.expand_dims(actions, axis=2)
+
+        for actions_coeff_idx in range(actions.shape[-1]):
+            beta = actions[:, :, actions_coeff_idx]
+            # put all actions in a single array and plot the matrix 
+            fig, ax = plt.subplots(1,2,figsize=(10, 10))
+            ax[0].imshow(beta)
+            ax[0].set_title('actions taken by the agent')
+            ax[0].set_xlabel('step')
+            ax[0].set_ylabel('starting point')
 
 
-        # on the problem surface, plot agent actions for each starting point
-        ax[1].contourf(X, Y, Z, 50, cmap="gray")
-        ax[1].set_title('Agent actions for each starting point')
-        ax[1].set_xlabel('x')
-        ax[1].set_ylabel('y')
-        for i in range(nb_test_points):
-            ax[1].scatter(trajectories[i][:, 0], trajectories[i][:, 1], c=beta[i,:], s=1)
-        plt.savefig("visualization/graphs/agent_actions.png")
-        if do_plot:
+            # on the problem surface, plot agent actions for each starting point
+            ax[1].contourf(X, Y, Z, 50, cmap="gray")
+            ax[1].set_title('Agent actions for each starting point')
+            ax[1].set_xlabel('x')
+            ax[1].set_ylabel('y')
+            for i in range(nb_test_points):
+                ax[1].scatter(trajectories[i][:, 0], trajectories[i][:, 1], c=beta[i,:], s=1)
+            plt.savefig("visualization/graphs/agent_actions.png")
+
             plt.show()
 
     optimizer_names = list(results.keys())  
@@ -291,34 +290,36 @@ def agent_statistics(results, params_dict, do_plot=True):
     if do_plot:
         plt.show()
     """
-
-    # select a starting point where the agent is the best optimizer
-    idx = np.array(best_optimizer_list) == "agent"
-    idx = np.where(idx)[0][0]
-    
-    # plot the trajectories of all optimizers for the selected starting point
-    fig, ax = plt.subplots(1, 2, figsize=(10, 10))
-    ax[0].contourf(X, Y, Z, 50, cmap="gray")
-    ax[0].set_title('Trajectories for the selected starting point')
-    ax[0].set_xlabel('x')
-    ax[0].set_ylabel('y')
-    for i, optimizer_name in enumerate(optimizer_names):
-        trajectories = results[optimizer_name]['trajectories']
-        ax[0].plot(trajectories[idx][:, 0], trajectories[idx][:, 1], 'o-', label=optimizer_name)
-    ax[0].legend()
-
-    
-    # plot the objective values for the selected starting point and optimizer
-    ax[1].set_title('Objective values for the selected starting point')
-    ax[1].set_xlabel('step')
-    ax[1].set_ylabel('objective value')
-    for i, optimizer_name in enumerate(optimizer_names):
-        obj_values = results[optimizer_name]['obj_values']
-        ax[1].plot(obj_values[idx], label=optimizer_name)
-    ax[1].legend()
-    plt.savefig("visualization/graphs/objective_values_selected.png")
     if do_plot:
-        plt.show()
+        # select a starting point where the agent is the best optimizer
+        idx_list = np.array(best_optimizer_list) == "agent"
+        # if such a starting point exists, pick one at random
+        if np.sum(idx_list) > 0:
+            starting_point_idx = np.random.choice(np.where(idx_list)[0])
+            
+            # plot the trajectories of all optimizers for the selected starting point
+            fig, ax = plt.subplots(1, 2, figsize=(10, 10))
+            ax[0].contourf(X, Y, Z, 50, cmap="gray")
+            ax[0].set_title('Trajectories for the selected starting point')
+            ax[0].set_xlabel('x')
+            ax[0].set_ylabel('y')
+            for i, optimizer_name in enumerate(optimizer_names):
+                trajectories = results[optimizer_name]['trajectories']
+                ax[0].plot(trajectories[starting_point_idx][:, 0], trajectories[starting_point_idx][:, 1], 'o-', label=optimizer_name)
+            ax[0].legend()
+
+            
+            # plot the objective values for the selected starting point and optimizer
+            ax[1].set_title('Objective values for the selected starting point')
+            ax[1].set_xlabel('step')
+            ax[1].set_ylabel('objective value')
+            for i, optimizer_name in enumerate(optimizer_names):
+                obj_values = results[optimizer_name]['obj_values']
+                ax[1].plot(obj_values[starting_point_idx], label=optimizer_name)
+            ax[1].legend()
+            plt.savefig("visualization/graphs/objective_values_selected.png")
+
+            plt.show()  
     # count the number of times each optimizer is the best
     best_optimizer_count = {}
     for optimizer_name in optimizer_names:
