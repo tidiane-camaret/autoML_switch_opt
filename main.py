@@ -13,6 +13,9 @@ import matplotlib.pyplot as plt
 from stable_baselines3.common.env_checker import check_env
 from omegaconf import OmegaConf
 from collections import Counter
+from stable_baselines3.common.env_util import make_vec_env
+
+num_cpu = 16
 
 
 config = OmegaConf.load('config.yaml')
@@ -62,6 +65,7 @@ train_env = Environment(config=config,
                             reward_function=reward_function
                             )
 
+vec_env = make_vec_env(train_env, n_envs=num_cpu)
 # sanity check for the environment
 check_env(train_env, warn=True)
 
