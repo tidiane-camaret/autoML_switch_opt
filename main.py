@@ -115,7 +115,7 @@ policy.learn(total_timesteps=agent_training_timesteps,
 
 # evaluate the agent
 train_env.train_mode = False # remove train mode, avoids calculating the lookahead
-
+print("evaluating the agent ...")
 optimizers_trajectories['agent'] = {}
 
 obj_values, trajectories, actions = eval_agent(train_env, 
@@ -129,7 +129,7 @@ optimizers_trajectories['agent']['trajectories'] = trajectories
 optimizers_trajectories['agent']['actions'] = actions
 
 # evaluate a random agent
-
+print("evaluating a random agent ...")
 optimizers_trajectories['random_agent'] = {}
 
 obj_values, trajectories, actions = eval_agent(train_env, 
