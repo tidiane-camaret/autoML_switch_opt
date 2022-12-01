@@ -13,8 +13,8 @@ import matplotlib.pyplot as plt
 from stable_baselines3.common.env_checker import check_env
 from omegaconf import OmegaConf
 from collections import Counter
+from stable_baselines3.common import vec_env, monitor
 from stable_baselines3.common.env_util import make_vec_env
-
 num_cpu = 16
 
 
@@ -65,35 +65,26 @@ train_env = Environment(config=config,
                             reward_function=reward_function
                             )
 
-vec_env = make_vec_env(train_env, n_envs=num_cpu)
+vec_env = make_vec_env(lambda: train_env, n_envs=num_cpu)
 # sanity check for the environment
-check_env(train_env, warn=True)
+check_env(vec_env, warn=True)
 
 # define the agent
 if config.policy.model == 'PPO' or config.policy.optimization_mode == "soft":
     policy = stable_baselines3.PPO('MlpPolicy',
-                                   train_env, 
+                                   vec_env, 
                                    verbose=0,
                                    tensorboard_log=tb_log_dir,
                                    device='cpu')
 
 elif config.policy.model == 'DQN':
     policy = stable_baselines3.DQN('MlpPolicy',
-                                  train_env, 
+                                  vec_env, 
                                   buffer_size=100_000, 
                                   verbose=0,
                                    exploration_fraction=config.policy.exploration_fraction,
                                    tensorboard_log=tb_log_dir,
                                    device='cpu')
-
-else:
-    print('policy is not selected, it is set DQN')
-    policy = stable_baselines3.DQN('MlpPolicy', 
-                                    train_env, 
-                                    verbose=0,
-                                   exploration_fraction=config.policy.exploration_fraction,
-                                   tensorboard_log=tb_log_dir)
-
 
 
 
