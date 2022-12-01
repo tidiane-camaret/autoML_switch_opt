@@ -27,7 +27,7 @@ history_len = config.model.history_len
 
 
 # define the problem list
-nb_test_points = 100
+nb_test_points = 1
 
 ### parameters specific to math problems
 math_problem_train_class = NoisyHillsProblem
