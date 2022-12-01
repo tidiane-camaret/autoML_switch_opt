@@ -255,7 +255,7 @@ class Environment(gym.Env):
         self.obj_values_sum += obj_value
 
         if self.config.environment.reward_system == "lookahead":
-            reward = 1 if action == np.argmin(lookahead_obj_values) else 0
+            reward = 1 if action == np.argmin(lookahead_obj_values) else -1
         elif self.config.environment.reward_system == "function":
             reward = self.reward_function(obj_value)
         else:

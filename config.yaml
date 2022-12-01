@@ -12,9 +12,9 @@ problem : 'MathProblem' #options:['MNIST', 'MathProblem']
 
 policy:
   model: 'DQN' # options:['DQN', 'PPO']  info: DQN for hard method, PPO for soft method.
-  exploration_fraction : 0.5
+  exploration_fraction : 0.25
   optimization_mode : 'hard' # options:['soft', 'hard']
 
 environment:
-  reward_system : "lookahead" # options:['function', 'lookahead']  # info: Lookahead only for hard method.
+  reward_system : "function" # options:['function', 'lookahead']  # info: Lookahead only for hard method.
   optimizer_storing_method : "state_dict" # options:['dict', optimizer_class']

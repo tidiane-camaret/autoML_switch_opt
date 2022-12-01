@@ -27,7 +27,7 @@ history_len = config.model.history_len
 
 
 # define the problem list
-nb_test_points = 1
+nb_test_points = 100
 
 ### parameters specific to math problems
 math_problem_train_class = NoisyHillsProblem
@@ -105,18 +105,6 @@ run = wandb.init(reinit=True,
 
 optimizers_trajectories = {}
 
-# evaluate the handcrafted optimizers
-for optimizer_class in optimizer_class_list:
-    optimizer_name = optimizer_class.__name__
-    optimizers_trajectories[optimizer_name] = {}
-    obj_values, trajectories = eval_handcrafted_optimizer(test_problem_list, 
-                                                            optimizer_class, 
-                                                            model_training_steps, 
-                                                            config, 
-                                                            do_init_weights=False)
-
-    optimizers_trajectories[optimizer_name]['obj_values'] = obj_values
-    optimizers_trajectories[optimizer_name]['trajectories'] = trajectories
 
 # train the agent
 
@@ -153,6 +141,22 @@ obj_values, trajectories, actions = eval_agent(train_env,
 optimizers_trajectories['random_agent']['obj_values'] = obj_values
 optimizers_trajectories['random_agent']['trajectories'] = trajectories
 optimizers_trajectories['random_agent']['actions'] = actions
+
+
+# evaluate the handcrafted optimizers
+for optimizer_class in optimizer_class_list:
+    optimizer_name = optimizer_class.__name__
+    print("evaluating ", optimizer_name)
+    optimizers_trajectories[optimizer_name] = {}
+    obj_values, trajectories = eval_handcrafted_optimizer(test_problem_list, 
+                                                            optimizer_class, 
+                                                            model_training_steps, 
+                                                            config, 
+                                                            do_init_weights=False)
+
+    optimizers_trajectories[optimizer_name]['obj_values'] = obj_values
+    optimizers_trajectories[optimizer_name]['trajectories'] = trajectories
+
 
 
 
