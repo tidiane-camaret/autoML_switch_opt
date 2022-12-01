@@ -65,9 +65,12 @@ train_env = Environment(config=config,
                             reward_function=reward_function
                             )
 
-vec_train_env = make_vec_env(lambda: train_env, n_envs=num_cpu)
 # sanity check for the environment
-check_env(vec_train_env, warn=True)
+check_env(train_env, warn=True)
+
+# vectorize the environment for parallelization
+vec_train_env = make_vec_env(lambda: train_env, n_envs=num_cpu)
+
 
 # define the agent
 if config.policy.model == 'PPO' or config.policy.optimization_mode == "soft":
