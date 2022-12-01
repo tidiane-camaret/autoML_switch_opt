@@ -52,7 +52,8 @@ optimizer_class_list = [torch.optim.SGD, torch.optim.Adam, torch.optim.RMSprop]
 
 
 # define the environment based on the problem list
-reward_function = lambda x: -x
+threshold = 0.05
+reward_function = lambda x: 10 if x < threshold else -1
 train_env = Environment(config=config,
                             problem_list=train_problem_list,
                             num_steps=model_training_steps,
@@ -72,8 +73,9 @@ if config.policy.model == 'PPO' or config.policy.optimization_mode == "soft":
                                    tensorboard_log=tb_log_dir)
 
 elif config.policy.model == 'DQN':
-    policy = stable_baselines3.DQN('MlpPolicy', 
+    policy = stable_baselines3.DQN('MlpPolicy',
                                   train_env, 
+                                  buffer_size=100_000, 
                                   verbose=0,
                                    exploration_fraction=config.policy.exploration_fraction,
                                    tensorboard_log=tb_log_dir)
@@ -166,15 +168,6 @@ for j, optimizer_name in enumerate(optimizers_trajectories.keys()):
         score_matrix[i, j] = np.mean(obj_values[i][:])
 
 
-# plot the histogram of the scores for each optimizer
-fig, ax = plt.subplots(1, 1, figsize=(8, 6))
-for j, optimizer_name in enumerate(optimizers_trajectories.keys()):
-    ax.hist(score_matrix[:, j], bins=100, label=optimizer_name, alpha=0.5)
-ax.legend()
-ax.set_xlabel('mean objective value')
-ax.set_ylabel('number of test points')
-ax.set_title('Histogram of the mean objective value for each optimizer')
-
 
 # list of best optimizers for each starting point. 
 # if the agent is in a tie with a handcrafted optimizer, the agent wins
@@ -188,7 +181,13 @@ for i in range(nb_test_points):
             best_optimizer = optimizer_name
     best_optimizer_list.append(best_optimizer)
 
-print("agent wins {} times".format(best_optimizer_list.count('agent')))
+
+optimizers_scores = {}
+for optimizer_name in optimizers_trajectories.keys():
+    optimizers_scores[optimizer_name] = np.mean(np.array(best_optimizer_list) == optimizer_name)
+wandb.log({"optimizers_scores":optimizers_scores})
+
+print("optimizers scores : ", optimizers_scores)
 
 # plot mean objective value for each optimizer on the same plot
 plt.figure(figsize=(10, 6))
@@ -198,6 +197,14 @@ for optimizer_name, optimizer_trajectories in optimizers_trajectories.items():
 plt.legend()
 plt.show()
 
+# plot the histogram of the scores for each optimizer
+fig, ax = plt.subplots(1, 1, figsize=(8, 6))
+for j, optimizer_name in enumerate(optimizers_trajectories.keys()):
+    ax.hist(score_matrix[:, j], bins=100, label=optimizer_name, alpha=0.5)
+ax.legend()
+ax.set_xlabel('mean objective value')
+ax.set_ylabel('number of test points')
+ax.set_title('Histogram of the mean objective value for each optimizer')
 
 
 # get indices where the agent is the best optimizer
@@ -235,11 +242,8 @@ for actions_coeff_idx in range(actions.shape[-1]):
     ax.set_title('actions taken by the agent')
     ax.set_xlabel('step')
     ax.set_ylabel('starting point')
+    plt.show()
 
-optimizers_scores = {}
-for optimizer_name in optimizers_trajectories.keys():
-    optimizers_scores[optimizer_name] = np.mean(np.array(best_optimizer_list) == optimizer_name)
-wandb.log({"optimizers_scores":optimizers_scores})
 
 
 
