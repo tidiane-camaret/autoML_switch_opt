@@ -11,7 +11,7 @@ from modifedAdam import ModifiedAdam
 
 from problem import Variable
 
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
+device = 'cpu' #'cuda' if torch.cuda.is_available() else 'cpu'
 
 config = OmegaConf.load('config.yaml')
 

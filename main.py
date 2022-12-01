@@ -70,7 +70,8 @@ if config.policy.model == 'PPO' or config.policy.optimization_mode == "soft":
     policy = stable_baselines3.PPO('MlpPolicy',
                                    train_env, 
                                    verbose=0,
-                                   tensorboard_log=tb_log_dir)
+                                   tensorboard_log=tb_log_dir,
+                                   device='cpu')
 
 elif config.policy.model == 'DQN':
     policy = stable_baselines3.DQN('MlpPolicy',
@@ -78,7 +79,8 @@ elif config.policy.model == 'DQN':
                                   buffer_size=100_000, 
                                   verbose=0,
                                    exploration_fraction=config.policy.exploration_fraction,
-                                   tensorboard_log=tb_log_dir)
+                                   tensorboard_log=tb_log_dir,
+                                   device='cpu')
 
 else:
     print('policy is not selected, it is set DQN')
