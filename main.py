@@ -15,7 +15,7 @@ from omegaconf import OmegaConf
 from collections import Counter
 from stable_baselines3.common import vec_env, monitor
 from stable_baselines3.common.env_util import make_vec_env
-num_cpu = 16
+num_cpu = 128
 
 
 config = OmegaConf.load('config.yaml')
