@@ -26,8 +26,8 @@ sweep_config = {
         "name": "agent_score"
     },
     "parameters": {"exploration_fraction": {
-                        "max": 0.25,
-                        "min": 0.25,},
+                        "values": [0.25]
+                        },
                     "lr": {
                         "values": [0.01]
                         },
