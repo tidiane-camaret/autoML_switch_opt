@@ -20,7 +20,7 @@ test_problem_list = [math_problem_eval_class(x0=np.random.uniform(-xlim, xlim, s
 
 
 sweep_config = {
-    "method": "grid",
+    "method": "random",
     "metric": {
         "goal": "maximize",
         "name": "agent_score"
@@ -35,10 +35,12 @@ sweep_config = {
                         "values": [15]#[1, 15, 25, 35, 50 ]
                         },
                     "nb_timesteps": {
-                        "values": [100, 1000, 10000, 20000, 50000, 100000]
+                        #"values": [100, 1000, 10000, 20000, 50000, 100000]
+                        "min": 100,
+                        "max": 100000,
                         },
                     "reward_system": {
-                        "values": ["lookahead"]#,"threshold", "inverse", "opposite"]
+                        "values": ["lookahead","threshold", "inverse", "opposite"]
                         },
                     "optimization_mode": {
                         "values": ["hard"]},
@@ -49,8 +51,8 @@ sweep_config = {
 
 
 
-sweep_id = wandb.sweep(sweep_config, project="switching_optimizers")
-#sweep_id = "switching_optimizers/oyke0zb7"
+#sweep_id = wandb.sweep(sweep_config, project="switching_optimizers")
+sweep_id = "switching_optimizers/j5eex5gj"
 
 def sweep_function():
     run = wandb.init()
