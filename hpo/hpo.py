@@ -46,7 +46,7 @@ sweep_config = {
                     "history_len": {
                         "values": [1, 5, 10, 15, 20, 30, 40, 50]},
                     "nb_timesteps": {
-                        "values": [1000, 10000, 100000, 1000000]},
+                        "values": [1, 1000, 10000, 20000, 50000, 100000]},
                     "reward_system": {
                         "values": ["threshold", "inverse", "opposite"]},
                     "optimization_mode": {
