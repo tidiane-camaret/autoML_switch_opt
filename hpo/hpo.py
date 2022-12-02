@@ -44,7 +44,7 @@ sweep_config = {
                     "lr": {
                         "values": [0.01]},
                     "history_len": {
-                        "values": [1, 5, 10, 15, 20, 30, 40, 50]},
+                        "values": [1, 15, 25, 35, 50 ]},
                     "nb_timesteps": {
                         "values": [1, 1000, 10000, 20000, 50000, 100000]},
                     "reward_system": {
@@ -58,7 +58,7 @@ sweep_config = {
 
 
 
-sweep_id = wandb.sweep(sweep_config, project="switching_optimizers")
+sweep_id = "switching_optimizers/xeou01j8"#wandb.sweep(sweep_config, project="switching_optimizers")
 
 def sweep_function():
     run = wandb.init()

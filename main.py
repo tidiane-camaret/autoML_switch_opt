@@ -30,7 +30,7 @@ history_len = config.model.history_len
 exploration_fraction = config.policy.exploration_fraction
 lr = config.model.lr
 # define the problem list
-nb_test_points = 100
+
 
 ### parameters specific to math problems
 math_problem_train_class = NoisyHillsProblem
@@ -41,11 +41,13 @@ reward_system = config.environment.reward_system
 optimization_mode = config.policy.optimization_mode
 
 if config.problem == 'MNIST':
+    nb_test_points = 100
     binary_classes = [[2,3], [4,5], [6,7], [8,9]]
     train_problem_list = [MNISTProblemClass(classes = bc) for bc in binary_classes]# for _ in range(num_agent_runs)]
     test_problem_list = [MNISTProblemClass(classes = [0,1]) for _ in range(nb_test_points)]
 
 elif config.problem == 'MathProblem':
+    nb_test_points = 500
     train_problem_list = [math_problem_train_class(x0=np.random.uniform(-xlim, xlim, size=(2))) 
                         for _ in range(num_agent_runs)]
     test_problem_list = [math_problem_eval_class(x0=np.random.uniform(-xlim, xlim, size=(2))) 
