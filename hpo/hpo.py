@@ -58,7 +58,8 @@ sweep_config = {
 
 
 
-sweep_id = "switching_optimizers/xeou01j8"#wandb.sweep(sweep_config, project="switching_optimizers")
+#sweep_id = wandb.sweep(sweep_config, project="switching_optimizers")
+sweep_id = "switching_optimizers/oyke0zb7"
 
 def sweep_function():
     run = wandb.init()
