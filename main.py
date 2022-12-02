@@ -45,6 +45,7 @@ if config.problem == 'MNIST':
     binary_classes = [[2,3], [4,5], [6,7], [8,9]]
     train_problem_list = [MNISTProblemClass(classes = bc) for bc in binary_classes]# for _ in range(num_agent_runs)]
     test_problem_list = [MNISTProblemClass(classes = [0,1]) for _ in range(nb_test_points)]
+    threshold = 0.05
 
 elif config.problem == 'MathProblem':
     nb_test_points = 500
@@ -52,6 +53,20 @@ elif config.problem == 'MathProblem':
                         for _ in range(num_agent_runs)]
     test_problem_list = [math_problem_eval_class(x0=np.random.uniform(-xlim, xlim, size=(2))) 
                         for _ in range(nb_test_points)]
+    
+    # meshgrid for plotting the problem surface
+    x = np.arange(-xlim, xlim, xlim / 100)
+    y = np.arange(-xlim, xlim, xlim / 100)
+    X, Y = np.meshgrid(x, y)
+    X, Y = torch.tensor(X), torch.tensor(Y)
+    Z = math_problem_eval_class().function_def(X, Y)
+    Z = Z.detach().numpy()
+
+    # calculate minimum of the problem surface
+    # and determine the threshold for the reward function
+    function_min = np.min(Z)
+    #print('test function minimum: ', function_min)
+    threshold = function_min + 0.001
 
 
 # optimizer classes
@@ -59,8 +74,6 @@ optimizer_class_list = [torch.optim.SGD, torch.optim.Adam, torch.optim.RMSprop]
 
 
 # define the environment based on the problem list
-threshold = 0.05
-reward_function = lambda x: 10 if x < threshold else -1
 
 
 def train_and_eval_agent(train_problem_list=train_problem_list,

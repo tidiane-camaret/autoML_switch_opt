@@ -17,19 +17,6 @@ test_problem_list = [math_problem_eval_class(x0=np.random.uniform(-xlim, xlim, s
                     for _ in range(nb_test_points)]
 
 
-# meshgrid for plotting the problem surface
-x = np.arange(-xlim, xlim, xlim / 100)
-y = np.arange(-xlim, xlim, xlim / 100)
-X, Y = np.meshgrid(x, y)
-X, Y = torch.tensor(X), torch.tensor(Y)
-Z = math_problem_eval_class().function_def(X, Y)
-Z = Z.detach().numpy()
-
-# calculate minimum of the problem surface
-# and determine the threshold for the reward function
-function_min = np.min(Z)
-#print('test function minimum: ', function_min)
-threshold = function_min + 0.001
 
 
 sweep_config = {
@@ -80,7 +67,6 @@ def sweep_function():
                         optimization_mode=optimization_mode,
                         lr=lr,
                         reward_system=reward_system,
-                        threshold=threshold,
                         do_plot=False)
 
     wandb.log({"optimizers_scores":optimizers_scores,
