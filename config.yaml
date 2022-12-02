@@ -1,13 +1,13 @@
 model:
   num_problems : 1000
-  num_agent_runs : 2000
+  num_agent_runs : 1000
   model_training_steps : 100
   history_len: 15
   epochs : 10
   lr : 0.01
 
   
-problem : 'MathProblem' #options:['MNIST', 'MathProblem']
+problem : 'MNIST' #options:['MNIST', 'MathProblem']
 
 
 policy:
@@ -16,5 +16,5 @@ policy:
   optimization_mode : 'hard' # options:['soft', 'hard']
 
 environment:
-  reward_system : "function" # options:['function', 'lookahead']  # info: Lookahead only for hard method.
+  reward_system : "inverse" # options:['function', 'lookahead']  # info: Lookahead only for hard method.
   optimizer_storing_method : "state_dict" # options:['dict', optimizer_class']
