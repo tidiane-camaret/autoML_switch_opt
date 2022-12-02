@@ -4,11 +4,11 @@ from problem import NoisyHillsProblem, GaussianHillsProblem
 import numpy as np
 import torch
 ### parameters specific to math problems
-math_problem_train_class = NoisyHillsProblem
+math_problem_train_class = GaussianHillsProblem
 math_problem_eval_class = GaussianHillsProblem
 xlim = 2
 nb_train_points = 1000
-nb_test_points = 100
+nb_test_points = 500
 
 
 train_problem_list = [math_problem_train_class(x0=np.random.uniform(-xlim, xlim, size=(2))) 
@@ -20,22 +20,26 @@ test_problem_list = [math_problem_eval_class(x0=np.random.uniform(-xlim, xlim, s
 
 
 sweep_config = {
-    "method": "bayes",
+    "method": "grid",
     "metric": {
         "goal": "maximize",
         "name": "agent_score"
     },
     "parameters": {"exploration_fraction": {
-                        "max": 0.75,
-                        "min": 0.,},
+                        "max": 0.25,
+                        "min": 0.25,},
                     "lr": {
-                        "values": [0.01]},
+                        "values": [0.01]
+                        },
                     "history_len": {
-                        "values": [1, 15, 25, 35, 50 ]},
+                        "values": [15]#[1, 15, 25, 35, 50 ]
+                        },
                     "nb_timesteps": {
-                        "values": [1, 1000, 10000, 20000, 50000, 100000]},
+                        "values": [100, 1000, 10000, 20000, 50000, 100000]
+                        },
                     "reward_system": {
-                        "values": ["threshold", "inverse", "opposite"]},
+                        "values": ["lookahead"]#,"threshold", "inverse", "opposite"]
+                        },
                     "optimization_mode": {
                         "values": ["hard"]},
 
@@ -45,8 +49,8 @@ sweep_config = {
 
 
 
-#sweep_id = wandb.sweep(sweep_config, project="switching_optimizers")
-sweep_id = "switching_optimizers/oyke0zb7"
+sweep_id = wandb.sweep(sweep_config, project="switching_optimizers")
+#sweep_id = "switching_optimizers/oyke0zb7"
 
 def sweep_function():
     run = wandb.init()
