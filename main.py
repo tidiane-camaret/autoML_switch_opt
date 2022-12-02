@@ -69,6 +69,7 @@ def train_and_eval_agent(train_problem_list=train_problem_list,
                         optimization_mode=optimization_mode,
                         lr=lr,
                         reward_system=reward_system,
+                        threshold=threshold,
                         do_plot=True):
 
     train_env = Environment(
