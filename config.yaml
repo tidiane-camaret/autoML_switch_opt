@@ -7,14 +7,14 @@ model:
   lr : 0.01
 
   
-problem : 'MNIST' #options:['MNIST', 'MathProblem']
+problem : 'MNIST' #options:['MNIST', 'GaussianToGaussian', 'NoisyToNoisy', 'GaussianToNoisy', 'NoisyToGaussian']
 
 
 policy:
   model: 'DQN' # options:['DQN', 'PPO']  info: DQN for hard method, PPO for soft method.
-  exploration_fraction : 0.25
+  exploration_fraction : 0.1
   optimization_mode : 'hard' # options:['soft', 'hard']
 
 environment:
-  reward_system : "inverse" # options:['opposite', threshold, 'inverse', 'lookahead']  # info: Lookahead only for hard method.
+  reward_system : "lookahead" # options:['opposite', threshold, 'inverse', 'lookahead']  # info: Lookahead only for hard method.
   optimizer_storing_method : "state_dict" # options:['dict', optimizer_class']

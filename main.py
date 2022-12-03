@@ -33,9 +33,8 @@ lr = config.model.lr
 
 
 ### parameters specific to math problems
-math_problem_train_class = NoisyHillsProblem
-math_problem_eval_class = GaussianHillsProblem
-xlim = 2
+
+
 
 reward_system = config.environment.reward_system
 optimization_mode = config.policy.optimization_mode
@@ -47,8 +46,24 @@ if config.problem == 'MNIST':
     test_problem_list = [MNISTProblemClass(classes = [0,1]) for _ in range(nb_test_points)]
     threshold = 0.05
 
-elif config.problem == 'MathProblem':
+else :
+    xlim = 2
     nb_test_points = 500
+    if config.problem == 'GaussianToGaussian':
+        math_problem_train_class = GaussianHillsProblem
+        math_problem_eval_class = GaussianHillsProblem
+    elif config.problem == 'NoisyToNoisy':
+        math_problem_train_class = NoisyHillsProblem
+        math_problem_eval_class = NoisyHillsProblem
+    elif config.problem == 'NoisyToGaussian':
+        math_problem_train_class = NoisyHillsProblem
+        math_problem_eval_class = GaussianHillsProblem
+    elif config.problem == 'GaussianToNoisy':
+        math_problem_train_class = GaussianHillsProblem
+        math_problem_eval_class = NoisyHillsProblem
+
+
+    
     train_problem_list = [math_problem_train_class(x0=np.random.uniform(-xlim, xlim, size=(2))) 
                         for _ in range(num_agent_runs)]
     test_problem_list = [math_problem_eval_class(x0=np.random.uniform(-xlim, xlim, size=(2))) 
@@ -85,6 +100,7 @@ def train_and_eval_agent(train_problem_list=train_problem_list,
                         lr=lr,
                         reward_system=reward_system,
                         threshold=threshold,
+                        optimizer_class_list=optimizer_class_list,
                         do_plot=True):
 
     train_env = Environment(

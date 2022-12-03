@@ -30,11 +30,11 @@ all_problems_class_list = [NoisyHillsProblem, GaussianHillsProblem, RastriginPro
 # define the problem lists
 xlim = 2
 nb_train_points = config.model.num_problems
-nb_test_points = 500
+nb_test_points = 100
 history_len = config.model.history_len
 exploration_fraction = config.policy.exploration_fraction
 lr = config.model.lr
-reward_system = "threshold"
+reward_system = config.environment.reward_system
 optimization_mode = config.policy.optimization_mode
 
 
