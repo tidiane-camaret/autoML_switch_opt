@@ -6,11 +6,11 @@ import torchvision.datasets as datasets
 from torch.utils.data import DataLoader, RandomSampler, Subset
 import torchvision.transforms as transforms
 
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
+device = 'cpu' #'cuda' if torch.cuda.is_available() else 'cpu'
 
 def init_weights(m):
     # initialize weights of the model m
-    if isinstance(m, nn.Linear):
+    if isinstance(m, nn.Linear) or isinstance(m, nn.Conv2d):
         torch.nn.init.xavier_uniform_(m.weight)
         m.bias.data.fill_(0.01)
 
