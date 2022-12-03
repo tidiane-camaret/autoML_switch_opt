@@ -19,7 +19,7 @@ sweep_config = {
     },
     "parameters": {
                     "problem": {
-                        "values": ["GaussianToGaussian"]
+                        "values": ["GaussianToNoisy"]
                     },
                     "exploration_fraction": {
                         "values": [0.25]
@@ -28,15 +28,15 @@ sweep_config = {
                         "values": [0.01]
                         },
                     "history_len": {
-                        "values": [25]#[1, 15, 25, 35, 50 ]
+                        "values": [1, 5, 15, 25, 35, 50 ]
                         },
                     "nb_timesteps": {
-                        #"values": [100, 1000, 10000, 20000, 50000, 100000]
-                        "min": 100,
-                        "max": 100000,
+                        "values": [80000]
+                        #"min": 100,
+                        #"max": 100000,
                         },
                     "reward_system": {
-                        "values": ["lookahead","threshold", "inverse", "opposite"]
+                        "values": ["inverse"]
                         },
                     "optimization_mode": {
                         "values": ["hard"]},
