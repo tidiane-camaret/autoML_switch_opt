@@ -31,6 +31,11 @@ all_problems_class_list = [NoisyHillsProblem, GaussianHillsProblem, RastriginPro
 xlim = 2
 nb_train_points = config.model.num_problems
 nb_test_points = 500
+history_len = config.model.history_len
+exploration_fraction = config.policy.exploration_fraction
+lr = config.model.lr
+reward_system = "threshold"
+optimization_mode = config.policy.optimization_mode
 
 
 def train_and_eval_agent(problemclass_train, problemclass_eval, agent_training_timesteps, do_plot=True):
@@ -70,14 +75,17 @@ def train_and_eval_agent(problemclass_train, problemclass_eval, agent_training_t
 
 
     # parameters of the environment
-    reward_function = lambda x: 10 if x < threshold else -1
-    train_env = Environment(config=config,
+    train_env = Environment(
                             problem_list=train_problem_list,
                             num_steps=model_training_steps,
                             history_len=history_len,
+                            optimization_mode=optimization_mode,
+                            lr=lr,
+                            reward_system=reward_system,
+                            threshold=threshold,
                             optimizer_class_list=optimizer_class_list,
-                            reward_function=reward_function
                             )
+                        
     check_env(train_env, warn=True)
 
     # define the agent
@@ -334,8 +342,8 @@ def get_problem_name(problemclass):
 
 if __name__ == "__main__":
 
-    problemclass_train = RastriginProblem
-    problemclass_eval = AckleyProblem
+    problemclass_train = GaussianHillsProblem
+    problemclass_eval = GaussianHillsProblem
 
     problemclass_eval_name = problemclass_eval.__name__ if isinstance(problemclass_eval, type) else problemclass_eval
     problemclass_train_name = problemclass_train.__name__ if isinstance(problemclass_train, type) else problemclass_train
