@@ -26,6 +26,7 @@ def eval_agent(env, policy, problem_list=None,  num_episodes=10, num_steps=5, ra
                 obs, reward, done, info = env.step(action)
                 actions[episode, step] = action
                 obj_values[episode, step] = info["obj_value"]
+
                 t.append(info["traj_position"])
                 if done:
                     break
@@ -34,8 +35,8 @@ def eval_agent(env, policy, problem_list=None,  num_episodes=10, num_steps=5, ra
 
     else :
         obj_values =  np.zeros(( num_episodes, num_steps))
-        beta1, beta2, rewards = np.zeros(( num_episodes, num_steps)), np.zeros(
-            (num_episodes, num_steps)), np.zeros(( num_episodes, num_steps))
+        beta1, beta2, beta3, beta4 = np.zeros(( num_episodes, num_steps)), np.zeros(
+            (num_episodes, num_steps)), np.zeros(( num_episodes, num_steps)), np.zeros(( num_episodes, num_steps))
             #, np.zeros((num_episodes, num_steps)), np.zeros(
             #(num_episodes, num_steps))
         for episode in range(num_episodes):
@@ -45,11 +46,13 @@ def eval_agent(env, policy, problem_list=None,  num_episodes=10, num_steps=5, ra
                 obs, reward, done, info = env.step(action)
                 beta1[episode, step] = action[0]
                 beta2[episode, step] = action[1]
+                beta3[episode, step] = action[2]
+                beta4[episode, step] = action[3]
 
                 obj_values[episode, step] = info["obj_value"]
                 if done:
                     break
-        return obj_values, None , (beta1,beta2)
+        return obj_values, None , (beta1,beta2,beta3,beta4)
     
 
 
