@@ -4,6 +4,7 @@ from problem import NoisyHillsProblem, GaussianHillsProblem, ImageDatasetProblem
 import numpy as np
 import torch
 import torchvision.datasets
+import random
 ### parameters specific to math problems
 math_problem_train_class = GaussianHillsProblem
 math_problem_eval_class = GaussianHillsProblem
@@ -20,7 +21,7 @@ sweep_config = {
     },
     "parameters": {
                     "problem_train": {
-                        "values": ["Gaussian", "Noisy", "Ackley", "Rastrigin", "Norm"]
+                        "values": ["All"]
                     },
                     "problem_test": {
                         "values": ["Gaussian", "Noisy", "Ackley", "Rastrigin", "Norm"]
@@ -88,6 +89,12 @@ def sweep_function():
         elif wandb.config.problem_train == 'Norm':
             math_problem_train_class = NormProblem
 
+        train_problem_list = [math_problem_train_class(x0=np.random.uniform(-xlim, xlim, size=(2))) 
+                            for _ in range(nb_train_points)]
+
+        if wandb.config.problem_train == 'All':
+            train_problem_list = [random.choice([GaussianHillsProblem, NoisyHillsProblem, AckleyProblem, RastriginProblem, NormProblem])(x0=np.random.uniform(-xlim, xlim, size=(2))) 
+                            for _ in range(nb_train_points)]
 
         if wandb.config.problem_test == 'Gaussian':
             math_problem_eval_class = GaussianHillsProblem
@@ -102,8 +109,7 @@ def sweep_function():
 
 
 
-        train_problem_list = [math_problem_train_class(x0=np.random.uniform(-xlim, xlim, size=(2))) 
-                            for _ in range(nb_train_points)]
+
         test_problem_list = [math_problem_eval_class(x0=np.random.uniform(-xlim, xlim, size=(2))) 
                             for _ in range(nb_test_points)]
 
