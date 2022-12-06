@@ -97,6 +97,10 @@ class RosenbrockProblem:
                 x0 = torch.tensor(x0, dtype=torch.float32, requires_grad=True)
                 
             self.model0 = Variable(x0)
+            self.tuned_lrs = {torch.optim.Adam: 0.01,
+                    torch.optim.SGD: 0.01,
+                    torch.optim.RMSprop: 0.01,
+        }
 
         #def function_def(self, x):
         #    return torch.sum(100.0 * (x[1:] - x[:-1] ** 2.0) ** 2.0 + (1 - x[:-1]) ** 2.0)
@@ -120,6 +124,11 @@ class SquareProblemClass:
             self.model0 = Variable(x0)
             self.scale = scale
             self.center = center
+            self.tuned_lrs = {torch.optim.Adam: 0.01,
+                    torch.optim.SGD: 0.01,
+                    torch.optim.RMSprop: 0.01,
+        }
+
 
         def function_def(self, x):
             return self.scale*(x-self.center)**2
@@ -140,6 +149,11 @@ class NoisyHillsProblem:
             self.model0 = Variable(x0)
             self.scale = scale
             self.center = center
+            self.tuned_lrs = {torch.optim.Adam: 0.01,
+                    torch.optim.SGD: 0.01,
+                    torch.optim.RMSprop: 0.01,
+        }
+
 
         def function_def(self, x, y):
             return -1 * torch.sin(x * x) * torch.cos(3 * y * y) * torch.exp(-(x * y) * (x * y)) - torch.exp(-(x + y) * (x + y))
@@ -163,6 +177,11 @@ class RastriginProblem():
         self.model0 = Variable(x0)
         self.scale = scale
         self.center = center
+        self.tuned_lrs = {torch.optim.Adam: 0.01,
+                    torch.optim.SGD: 0.01,
+                    torch.optim.RMSprop: 0.01,
+        }
+
 
     def function_def(self, x, y):
         return 20 + x**2 - 10*torch.cos(2*np.pi*x) + y**2 - 10*torch.cos(2*np.pi*y)
@@ -184,6 +203,11 @@ class AckleyProblem():
         self.model0 = Variable(x0)
         self.scale = scale
         self.center = center
+        self.tuned_lrs = {torch.optim.Adam: 0.01,
+                    torch.optim.SGD: 0.01,
+                    torch.optim.RMSprop: 0.01,
+        }
+
 
     def function_def(self, x, y):
         return -20*torch.exp(-0.2*torch.sqrt(0.5*(x**2 + y**2))) - torch.exp(0.5*(torch.cos(2*torch.pi*x) + torch.cos(2*torch.pi*y))) + np.exp(1) + 20
@@ -202,7 +226,12 @@ class GaussianHillsProblem:
         x0 = torch.tensor(x0, dtype=torch.float32, requires_grad=True)
         self.model0 = Variable(x0)
         self.scale = scale
-        self.center = center
+        self.center = center            
+        self.tuned_lrs = {torch.optim.Adam: 0.01,
+                    torch.optim.SGD: 0.01,
+                    torch.optim.RMSprop: 0.01,
+        }
+
 
     def fd(self, x, y, x_mean, y_mean, x_sig, y_sig):
         normalizing = 1 / (2 * torch.pi * x_sig * y_sig)
@@ -239,6 +268,11 @@ class NormProblem:
         self.model0 = Variable(x0)
         self.scale = scale
         self.center = center
+        self.tuned_lrs = {torch.optim.Adam: 0.01,
+                    torch.optim.SGD: 0.01,
+                    torch.optim.RMSprop: 0.01,
+        }
+
 
     def function_def(self, x, y):
         return torch.sqrt(x**2 + (1.1*y)**2)
@@ -258,6 +292,11 @@ class YNormProblem:
         self.model0 = Variable(x0)
         self.scale = scale
         self.center = center
+        self.tuned_lrs = {torch.optim.Adam: 0.01,
+                    torch.optim.SGD: 0.01,
+                    torch.optim.RMSprop: 0.01,
+        }
+
 
     def function_def(self, x, y):
         return torch.sqrt(y**2) * 10
