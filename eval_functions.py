@@ -37,7 +37,7 @@ def eval_agent(env, policy, problem_list=None,  num_episodes=10, num_steps=5, ra
 
 
 
-def eval_handcrafted_optimizer(problem_list, optimizer_class, num_steps, config, do_init_weights=False, optimizer_2_class=None, switch_time=None):
+def eval_handcrafted_optimizer(problem_list, optimizer_class, num_steps, config, do_init_weights=False, optimizer_2_class=None, switch_time=None, lr = config.model.lr):
     """
     Run an optimizer on a list of problems
     """
@@ -49,7 +49,7 @@ def eval_handcrafted_optimizer(problem_list, optimizer_class, num_steps, config,
             model.apply(init_weights)
         o_v = []
         t = []
-        optimizer = optimizer_class(model.parameters(), lr=config.model.lr)
+        optimizer = optimizer_class(model.parameters(), lr=lr)
         for step in range(num_steps):
             if optimizer_2_class is not None and step == int(num_steps*switch_time):
                 optimizer = optimizer_2_class(model.parameters(), lr=config.model.lr)

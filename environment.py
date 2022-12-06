@@ -267,7 +267,7 @@ class Environment(gym.Env):
         elif self.reward_system == "threshold":
             reward = 10 if obj_value < self.threshold else -1
         elif self.reward_system == "inverse":
-            reward = 1 / (obj_value + 1e-6)
+            reward = 1 / (obj_value-(self.threshold - 0.001) + 1e-7)
         elif self.reward_system == "opposite":
             reward = -obj_value
         else:

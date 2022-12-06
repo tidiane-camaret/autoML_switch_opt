@@ -1,8 +1,9 @@
 import random
+import os, glob
 import wandb
 from problem import NoisyHillsProblem, GaussianHillsProblem, RosenbrockProblem\
     ,RastriginProblem, SquareProblemClass, AckleyProblem, NormProblem, \
-        YNormProblem, MNISTProblemClass
+        YNormProblem, MNISTProblemClass, ImageDatasetProblemClass
 import torch
 from environment import Environment
 from eval_functions import eval_agent, eval_handcrafted_optimizer
@@ -15,11 +16,13 @@ from omegaconf import OmegaConf
 from collections import Counter
 from stable_baselines3.common import vec_env, monitor
 from stable_baselines3.common.env_util import make_vec_env
+import torchvision.datasets
+
 num_cpu = 3
 
 
 config = OmegaConf.load('config.yaml')
-tb_log_dir = 'tb_logs/'+config.problem+' '+config.policy.optimization_mode
+tb_log_dir = 'tb_logs/'+config.problem.train+' '+config.policy.optimization_mode
 # number of agent training episodes
 num_agent_runs = config.model.num_agent_runs
 # number of steps in each episode
@@ -39,28 +42,39 @@ lr = config.model.lr
 reward_system = config.environment.reward_system
 optimization_mode = config.policy.optimization_mode
 
-if config.problem == 'MNIST':
+if config.problem.train == 'MNIST':
     nb_test_points = 100
     binary_classes = [[2,3], [4,5], [6,7], [8,9]]
-    train_problem_list = [MNISTProblemClass(classes = bc) for bc in binary_classes]# for _ in range(num_agent_runs)]
-    test_problem_list = [MNISTProblemClass(classes = [0,1]) for _ in range(nb_test_points)]
+    train_problem_list = [ImageDatasetProblemClass(classes = bc, dataset_class=torchvision.datasets.MNIST) for bc in binary_classes]
+    test_problem_list = [ImageDatasetProblemClass(classes = [0,1], dataset_class=torchvision.datasets.MNIST) for _ in range(nb_test_points)]
     threshold = 0.05
+
 
 else :
     xlim = 2
     nb_test_points = 500
-    if config.problem == 'GaussianToGaussian':
+    if config.problem.train == 'Gaussian':
         math_problem_train_class = GaussianHillsProblem
-        math_problem_eval_class = GaussianHillsProblem
-    elif config.problem == 'NoisyToNoisy':
+    elif config.problem.train == 'Noisy':
         math_problem_train_class = NoisyHillsProblem
-        math_problem_eval_class = NoisyHillsProblem
-    elif config.problem == 'NoisyToGaussian':
-        math_problem_train_class = NoisyHillsProblem
+    elif config.problem.train == 'Ackley':
+        math_problem_train_class = AckleyProblem
+    elif config.problem.train == 'Rastrigin':
+        math_problem_train_class = RastriginProblem
+    elif config.problem.train == 'Norm':
+        math_problem_train_class = NormProblem
+    
+
+    if config.problem.test == 'Gaussian':
         math_problem_eval_class = GaussianHillsProblem
-    elif config.problem == 'GaussianToNoisy':
-        math_problem_train_class = GaussianHillsProblem
+    elif config.problem.test == 'Noisy':
         math_problem_eval_class = NoisyHillsProblem
+    elif config.problem.test == 'Ackley':
+        math_problem_eval_class = AckleyProblem
+    elif config.problem.test == 'Rastrigin':
+        math_problem_eval_class = RastriginProblem
+    elif config.problem.test == 'Norm':
+        math_problem_eval_class = NormProblem
 
 
     
@@ -145,12 +159,24 @@ def train_and_eval_agent(train_problem_list=train_problem_list,
 
 
     # train the agent
+    train_problem_name = train_problem_list[0].__class__.__name__
+    saved_agent_path = 'models/trained_agent_' + train_problem_name + '_' + config.environment.reward_system
 
-    policy.learn(total_timesteps=agent_training_timesteps, 
-                progress_bar=True,
-                #eval_freq=1000, 
-                #eval_log_path=tb_log_dir
-                )
+    # if an agent is already trained, load it
+    if glob.glob(saved_agent_path+'*'):
+        print('loading trained agent ...')
+        policy= stable_baselines3.DQN.load(saved_agent_path, env=vec_train_env)
+        
+    
+    # otherwise train a new agent
+    else:
+        print('training agent ...')
+        policy.learn(total_timesteps=agent_training_timesteps, 
+                    progress_bar=True,
+                    #eval_freq=1000, 
+                    #eval_log_path=tb_log_dir
+                    )
+        policy.save(saved_agent_path)
 
     # evaluate the agent
     train_env.train_mode = False # remove train mode, avoids calculating the lookahead
@@ -191,7 +217,8 @@ def train_and_eval_agent(train_problem_list=train_problem_list,
                                                                 optimizer_class, 
                                                                 model_training_steps, 
                                                                 config, 
-                                                                do_init_weights=False)
+                                                                do_init_weights=False,
+                                                                lr = test_problem_list[0].tuned_lrs[optimizer_class],)
 
         optimizers_trajectories[optimizer_name]['obj_values'] = obj_values
         optimizers_trajectories[optimizer_name]['trajectories'] = trajectories

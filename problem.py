@@ -331,6 +331,121 @@ class MNISTProblemClass:
 
         self.obj_function = self._obj_function
 
+        self.tuned_lrs = {torch.optim.Adam: 0.05,
+                            torch.optim.SGD: 0.1,
+                            torch.optim.RMSprop: 0.01,
+        }
+
+    # prepares data from sampler to be inputted to model
+    def load_data_from_sampler(self, subset):
+        batch_data = torch.tensor([])
+        batch_labels = torch.tensor([])
+        # loop over the batch generated,
+        # data samples go in batch_data tensor, labels go in batch_labels
+        for data, target in subset:
+            batch_data = torch.cat((batch_data, data), dim=0)
+            batch_labels = torch.cat((batch_labels, torch.tensor([int(target)])), dim=0)
+        return batch_data, batch_labels
+
+    def _obj_function(self, model):
+        # defining criteria of loss
+        criterion = nn.BCELoss()
+        # use random sampler to get random indices in dataset
+        # the indices will determine our random batch
+        mnist_trainset = self.dataset
+        # get defining indices
+        batch_indices = RandomSampler(mnist_trainset, replacement=True, num_samples=self.batch_size, generator=None)
+        # pass indices to subset in order to get a sample
+        current_batch = Subset(mnist_trainset, list(batch_indices))
+        running_loss = 0
+        # split the subsample into data and labels to be fed to model
+        batch_data, batch_labels = self.load_data_from_sampler(current_batch)
+        # reshaping bc pytorch wants input of [batch, channel, height, width] - since we have o
+        batch_data = batch_data[:, None, :, :]
+
+        y_hat = model(batch_data)
+        batch_labels = torch.reshape(batch_labels, (5, 1))
+
+        loss = criterion(y_hat, batch_labels)
+        running_loss += loss.item()
+        self.running_loss = running_loss
+        return loss
+
+    def get_obj_function(self):
+        return self.obj_function
+
+
+class ImageDatasetProblemClass:
+
+    def __init__(self,
+                 classes,
+                 dataset_class = datasets.FashionMNIST,
+                 batch_size=5,
+                 num_classes_selected=2,
+                 weights_flag=False
+                 ):
+
+
+        # maximum is 45
+        self.batch_size = batch_size
+        self.num_classes_selected = num_classes_selected
+        self.weights_flag = weights_flag
+        self.num_classes = 10
+        # classes that define the problem
+        self.classes = classes
+        # tranform data, resize to make it smaller
+        transform = transforms.Compose([transforms.ToTensor(), transforms.Resize(10),
+                                        transforms.Normalize((0.5,), (0.5,))
+                                        ])
+        mnist_trainset = dataset_class(root='./data', train=True, download=True, transform=transform)
+
+        # Selecting the classes chosen  from train dataset
+        idx = (mnist_trainset.targets == self.classes[0]) | (mnist_trainset.targets == self.classes[1])
+
+        mnist_trainset.targets = mnist_trainset.targets[idx]
+        mnist_trainset.data = mnist_trainset.data[idx]
+
+        # assign classes to 0 or 1 label - for proper computing of loss
+        for i in range(0, len(mnist_trainset.targets)):
+            if mnist_trainset.targets[i] == self.classes[0]:
+
+                mnist_trainset.targets[i] = 0
+            else:
+
+                mnist_trainset.targets[i] = 1
+
+        # set dataset
+        self.dataset = mnist_trainset
+
+        # model definition
+
+        self.model0 = nn.Sequential(
+            nn.Conv2d(
+                in_channels=1,
+                out_channels=5,
+                kernel_size=5,
+                stride=1,
+                padding=2,
+            ),
+            nn.ReLU(),
+
+            nn.AdaptiveMaxPool2d(3),
+            nn.Flatten(),
+
+            nn.Linear(45, 1),
+            nn.Sigmoid()
+        )
+
+        if (weights_flag):
+            self.model0.apply(init_weights)
+
+        self.obj_function = self._obj_function
+
+        self.tuned_lrs = {torch.optim.Adam: 0.05,
+                            torch.optim.SGD: 0.1,
+                            torch.optim.RMSprop: 0.01,
+        }
+
     # prepares data from sampler to be inputted to model
     def load_data_from_sampler(self, subset):
         batch_data = torch.tensor([])

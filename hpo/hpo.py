@@ -1,8 +1,9 @@
 from main import train_and_eval_agent
 import wandb
-from problem import NoisyHillsProblem, GaussianHillsProblem, MNISTProblemClass
+from problem import NoisyHillsProblem, GaussianHillsProblem, ImageDatasetProblemClass, AckleyProblem, RastriginProblem, NormProblem
 import numpy as np
 import torch
+import torchvision.datasets
 ### parameters specific to math problems
 math_problem_train_class = GaussianHillsProblem
 math_problem_eval_class = GaussianHillsProblem
@@ -12,15 +13,19 @@ nb_test_points = 500
 
 
 sweep_config = {
-    "method": "random",
+    "method": "grid",
     "metric": {
         "goal": "maximize",
         "name": "agent_score"
     },
     "parameters": {
-                    "problem": {
-                        "values": ["GaussianToNoisy"]
+                    "problem_train": {
+                        "values": ["Gaussian", "Noisy", "Ackley", "Rastrigin", "Norm"]
                     },
+                    "problem_test": {
+                        "values": ["Gaussian", "Noisy", "Ackley", "Rastrigin", "Norm"]
+                    },
+
                     "exploration_fraction": {
                         "values": [0.25]
                         },
@@ -28,7 +33,7 @@ sweep_config = {
                         "values": [0.01]
                         },
                     "history_len": {
-                        "values": [1, 5, 15, 25, 35, 50 ]
+                        "values": [15]
                         },
                     "nb_timesteps": {
                         "values": [80000]
@@ -60,37 +65,48 @@ def sweep_function():
     reward_system = wandb.config.reward_system
     optimization_mode = wandb.config.optimization_mode
 
-    
-    if wandb.config.problem == 'MNIST':
+
+    if wandb.config.problem_train == 'MNIST':
         nb_test_points = 100
         binary_classes = [[2,3], [4,5], [6,7], [8,9]]
-        train_problem_list = [MNISTProblemClass(classes = bc) for bc in binary_classes]# for _ in range(num_agent_runs)]
-        test_problem_list = [MNISTProblemClass(classes = [0,1]) for _ in range(nb_test_points)]
+        train_problem_list = [ImageDatasetProblemClass(classes = bc, dataset_class=torchvision.datasets.MNIST) for bc in binary_classes]
+        test_problem_list = [ImageDatasetProblemClass(classes = [0,1], dataset_class=torchvision.datasets.MNIST) for _ in range(nb_test_points)]
         threshold = 0.05
+
 
     else :
         xlim = 2
         nb_test_points = 500
-        if wandb.config.problem == 'GaussianToGaussian':
+        if wandb.config.problem_train == 'Gaussian':
             math_problem_train_class = GaussianHillsProblem
-            math_problem_eval_class = GaussianHillsProblem
-        elif wandb.config.problem == 'NoisyToNoisy':
+        elif wandb.config.problem_train == 'Noisy':
             math_problem_train_class = NoisyHillsProblem
-            math_problem_eval_class = NoisyHillsProblem
-        elif wandb.config.problem == 'NoisyToGaussian':
-            math_problem_train_class = NoisyHillsProblem
-            math_problem_eval_class = GaussianHillsProblem
-        elif wandb.config.problem == 'GaussianToNoisy':
-            math_problem_train_class = GaussianHillsProblem
-            math_problem_eval_class = NoisyHillsProblem
+        elif wandb.config.problem_train == 'Ackley':
+            math_problem_train_class = AckleyProblem
+        elif wandb.config.problem_train == 'Rastrigin':
+            math_problem_train_class = RastriginProblem
+        elif wandb.config.problem_train == 'Norm':
+            math_problem_train_class = NormProblem
 
 
-        
+        if wandb.config.problem_test == 'Gaussian':
+            math_problem_eval_class = GaussianHillsProblem
+        elif wandb.config.problem_test == 'Noisy':
+            math_problem_eval_class = NoisyHillsProblem
+        elif wandb.config.problem_test == 'Ackley':
+            math_problem_eval_class = AckleyProblem
+        elif wandb.config.problem_test == 'Rastrigin':
+            math_problem_eval_class = RastriginProblem
+        elif wandb.config.problem_test == 'Norm':
+            math_problem_eval_class = NormProblem
+
+
+
         train_problem_list = [math_problem_train_class(x0=np.random.uniform(-xlim, xlim, size=(2))) 
-                            for _ in range(nb_test_points)]
+                            for _ in range(nb_train_points)]
         test_problem_list = [math_problem_eval_class(x0=np.random.uniform(-xlim, xlim, size=(2))) 
                             for _ in range(nb_test_points)]
-        
+
         # meshgrid for plotting the problem surface
         x = np.arange(-xlim, xlim, xlim / 100)
         y = np.arange(-xlim, xlim, xlim / 100)
@@ -106,8 +122,9 @@ def sweep_function():
         threshold = function_min + 0.001
 
 
+
     # optimizer classes
-    optimizer_class_list = [torch.optim.SGD, torch.optim.Adam, ]#torch.optim.RMSprop]
+    optimizer_class_list = [torch.optim.SGD, torch.optim.Adam, torch.optim.RMSprop]
 
 
     optimizers_scores, optimizers_trajectories = train_and_eval_agent(train_problem_list=train_problem_list,
