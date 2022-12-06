@@ -75,6 +75,7 @@ def sweep_function():
         threshold = 0.05
 
     elif wandb.config.problem_train == 'All':
+        xlim = 2
         nb_test_points = 500
         train_problem_list = [random.choice([GaussianHillsProblem, NoisyHillsProblem, AckleyProblem, RastriginProblem, NormProblem])(x0=np.random.uniform(-xlim, xlim, size=(2))) 
                             for _ in range(nb_train_points)]
