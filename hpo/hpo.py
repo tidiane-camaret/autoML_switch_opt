@@ -74,6 +74,10 @@ def sweep_function():
         test_problem_list = [ImageDatasetProblemClass(classes = [0,1], dataset_class=torchvision.datasets.MNIST) for _ in range(nb_test_points)]
         threshold = 0.05
 
+    elif wandb.config.problem_train == 'All':
+        nb_test_points = 500
+        train_problem_list = [random.choice([GaussianHillsProblem, NoisyHillsProblem, AckleyProblem, RastriginProblem, NormProblem])(x0=np.random.uniform(-xlim, xlim, size=(2))) 
+                            for _ in range(nb_train_points)]
 
     else :
         xlim = 2
@@ -92,9 +96,7 @@ def sweep_function():
         train_problem_list = [math_problem_train_class(x0=np.random.uniform(-xlim, xlim, size=(2))) 
                             for _ in range(nb_train_points)]
 
-        if wandb.config.problem_train == 'All':
-            train_problem_list = [random.choice([GaussianHillsProblem, NoisyHillsProblem, AckleyProblem, RastriginProblem, NormProblem])(x0=np.random.uniform(-xlim, xlim, size=(2))) 
-                            for _ in range(nb_train_points)]
+        
 
         if wandb.config.problem_test == 'Gaussian':
             math_problem_eval_class = GaussianHillsProblem
