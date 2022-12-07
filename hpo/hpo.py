@@ -6,8 +6,6 @@ import torch
 import torchvision.datasets
 import random
 ### parameters specific to math problems
-math_problem_train_class = GaussianHillsProblem
-math_problem_eval_class = GaussianHillsProblem
 xlim = 2
 nb_train_points = 1000
 nb_test_points = 500
@@ -84,36 +82,38 @@ def sweep_function():
         xlim = 2
         nb_test_points = 500
         if wandb.config.problem_train == 'Gaussian':
-            math_problem_train_class = GaussianHillsProblem
+            train_problem_class_list = [GaussianHillsProblem]
         elif wandb.config.problem_train == 'Noisy':
-            math_problem_train_class = NoisyHillsProblem
+            train_problem_class_list = [NoisyHillsProblem]
         elif wandb.config.problem_train == 'Ackley':
-            math_problem_train_class = AckleyProblem
+            train_problem_class_list = [AckleyProblem]
         elif wandb.config.problem_train == 'Rastrigin':
-            math_problem_train_class = RastriginProblem
+            train_problem_class_list = [RastriginProblem]
         elif wandb.config.problem_train == 'Norm':
-            math_problem_train_class = NormProblem
+            train_problem_class_list = [NormProblem]
+        elif wandb.config.problem_train == 'All':
+            train_problem_class_list = [GaussianHillsProblem, NoisyHillsProblem, AckleyProblem, RastriginProblem, NormProblem]
 
-        train_problem_list = [math_problem_train_class(x0=np.random.uniform(-xlim, xlim, size=(2))) 
+        train_problem_list = [random.choice(train_problem_class_list)(x0=np.random.uniform(-xlim, xlim, size=(2))) 
                             for _ in range(nb_train_points)]
 
         
 
         if wandb.config.problem_test == 'Gaussian':
-            math_problem_eval_class = GaussianHillsProblem
+            test_problem_class = GaussianHillsProblem
         elif wandb.config.problem_test == 'Noisy':
-            math_problem_eval_class = NoisyHillsProblem
+            test_problem_class = NoisyHillsProblem
         elif wandb.config.problem_test == 'Ackley':
-            math_problem_eval_class = AckleyProblem
+            test_problem_class = AckleyProblem
         elif wandb.config.problem_test == 'Rastrigin':
-            math_problem_eval_class = RastriginProblem
+            test_problem_class = RastriginProblem
         elif wandb.config.problem_test == 'Norm':
-            math_problem_eval_class = NormProblem
+            test_problem_class = NormProblem
 
 
 
 
-        test_problem_list = [math_problem_eval_class(x0=np.random.uniform(-xlim, xlim, size=(2))) 
+        test_problem_list = [test_problem_class(x0=np.random.uniform(-xlim, xlim, size=(2))) 
                             for _ in range(nb_test_points)]
 
         # meshgrid for plotting the problem surface
@@ -121,7 +121,7 @@ def sweep_function():
         y = np.arange(-xlim, xlim, xlim / 100)
         X, Y = np.meshgrid(x, y)
         X, Y = torch.tensor(X), torch.tensor(Y)
-        Z = math_problem_eval_class().function_def(X, Y)
+        Z = train_problem_list[0]().function_def(X, Y)
         Z = Z.detach().numpy()
 
         # calculate minimum of the problem surface
