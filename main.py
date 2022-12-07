@@ -1,170 +1,378 @@
-import os
 import random
-from problem import *
+import os, glob
+import wandb
+from problem import NoisyHillsProblem, GaussianHillsProblem, RosenbrockProblem \
+    , RastriginProblem, SquareProblemClass, AckleyProblem, NormProblem, \
+    YNormProblem, MNISTProblemClass, ImageDatasetProblemClass
 import torch
-from environment import *
+from environment import Environment
+from eval_functions import eval_agent, eval_handcrafted_optimizer
 import stable_baselines3
-from eval_functions import *
+from eval_functions import eval_agent
 import numpy as np
 import matplotlib.pyplot as plt
 from stable_baselines3.common.env_checker import check_env
 from omegaconf import OmegaConf
+from collections import Counter
+from stable_baselines3.common import vec_env, monitor
+from stable_baselines3.common.env_util import make_vec_env
+import torchvision.datasets
 
-config = OmegaConf.load('config.yaml')
-# number of problems to train on
-num_problems = config.model.num_problems
-# number of agent training episodes
-num_agent_runs = config.model.num_agent_runs
-# number of steps in each episode
-model_training_steps = config.model.model_training_steps
-
-agent_training_timesteps = num_agent_runs * model_training_steps
-
-# define the problem list
-if config.problem == 'MNIST':
-  train_problem_list = [MNISTProblemClass(classes =[0,1]) for _ in range(num_problems)]
-  test_problem_list = [MNISTProblemClass(classes = [0,1])]
-# if config.problem == 'MNIST':
-#   mnist_clasess = ([0,1],[2,3],[6,7],[8,9])
-#   train_problem_list = [MNISTProblemClass(classes = random.choice(mnist_clasess)) for _ in range(num_problems)]
-#   test_problem_list = [MNISTProblemClass(classes = [4,5])]
-
-elif config.problem == 'SquareProblem':
-  starting_points = np.arange(-0.5, -0.25, 0.01)
-  train_problem_list = [SquareProblemClass(
-      x0=x0
-      ) for x0 in starting_points]
-  test_problem_list = [SquareProblemClass(x0=-0.4)]
-
-elif config.problem == 'AckleyProblem':
-  train_problem_list = []
-  for i in range(config.model.num_problems):
-      problem = AckleyProblem(x0=np.random.rand(2) * 0.5)
-      train_problem_list.append(problem)
-  test_problem_list = [AckleyProblem(x0=[-2.3, 3.6])]
-
-elif config.problem == 'MLPProblem':
-  train_problem_list = [MLPProblemClass() for _ in range(num_problems)]
-  test_problem_list = [MLPProblemClass()]
-
-# optimizer classes
-optimizer_class_list = [torch.optim.SGD, torch.optim.RMSprop, torch.optim.Adam]
-
-
-history_len = config.model.history_len
 
 # define the environment based on the problem list
-train_env = Environment(config=config,
-                        problem_list=train_problem_list,
-                        num_steps=model_training_steps,
-                        history_len=history_len,
-                        optimizer_class_list=optimizer_class_list
-                        )
-test_env = Environment(config=config,
-                       problem_list=test_problem_list,
-                       num_steps=model_training_steps,
-                       history_len=history_len,
-                       optimizer_class_list=optimizer_class_list,
-                      # do_init_weights=False
-                       )
-
-# sanity check for the environment
-check_env(train_env, warn=True)
-check_env(test_env, warn=True)
-
-# define the agent
-if config.policy.model == 'DQN':
-    policy = stable_baselines3.DQN('MlpPolicy', train_env, verbose=0,
-                                   exploration_fraction=config.policy.exploration_fraction,
-                                   tensorboard_log='tb_logs/norm')
-elif config.policy.model == 'PPO':
-    policy = stable_baselines3.PPO('MlpPolicy', train_env, verbose=0,
-                                   tensorboard_log='tb_logs/norm')
-else:
-    print('policy is not selected, it is set DQN')
-    policy = stable_baselines3.DQN('MlpPolicy', train_env, verbose=0,
-                                   exploration_fraction=config.policy.exploration_fraction,
-                                   tensorboard_log='tb_logs/norm')
-
-actions, rewards = [], []
-untrained_agent_episode_steps = config.model.untrained_agent_episode_steps
-for _ in range(untrained_agent_episode_steps):
-    actions_, rewards_ = [], []
-    test_env.reset()
-    for _ in range(model_training_steps):
-        action = test_env.action_space.sample()
-        obs, reward, _, info = test_env.step(action)
-        actions_.append(action)
-        rewards_.append(info["obj_value"])
-    actions.append(actions_)
-    rewards.append(rewards_)
 
 
+def train_and_eval_agent(train_problem_list,
+                         test_problem_list,
+                         agent_training_timesteps,
+                         exploration_fraction,
+                         history_len,
+                         optimization_mode,
+                         lr,
+                         reward_system,
+                         threshold,
+                         optimizer_class_list,
+                         do_plot=True):
+    train_env = Environment(
+        problem_list=train_problem_list,
+        num_steps=model_training_steps,
+        history_len=history_len,
+        optimization_mode=optimization_mode,
+        lr=lr,
+        reward_system=reward_system,
+        threshold=threshold,
+        optimizer_class_list=optimizer_class_list,
+    )
+
+    # sanity check for the environment
+    check_env(train_env, warn=True)
+
+    # vectorize the environment for parallelization
+    vec_train_env = make_vec_env(lambda: train_env, n_envs=num_cpu)
+
+    # define the agent
+    if config.policy.model == 'PPO':
+        policy = stable_baselines3.PPO('MlpPolicy',
+                                       vec_train_env,
+                                       verbose=0,
+                                       tensorboard_log=tb_log_dir,
+                                       device='cpu')
+
+    elif config.policy.model == 'DQN':
+        policy = stable_baselines3.DQN('MlpPolicy',
+                                       vec_train_env,
+                                       # buffer_size=100_000,
+                                       verbose=0,
+                                       exploration_fraction=exploration_fraction,
+                                       tensorboard_log=tb_log_dir,
+                                       device='cpu')
+
+    optimizers_trajectories = {}
+
+    # train the agent
+    train_problem_name = train_problem_list[0].__class__.__name__
+    saved_agent_path = 'models/trained_agent_' + train_problem_name + '_' + config.environment.reward_system
+
+    # if an agent is already trained, load it
+    if config.policy.trained:
+        if glob.glob(saved_agent_path + '*'):
+            print('loading trained agent ...')
+            policy = stable_baselines3.DQN.load(saved_agent_path, env=vec_train_env)
 
 
-  
+    # otherwise train a new agent
+    else:
+        print('training agent ...')
+        policy.learn(total_timesteps=agent_training_timesteps,
+                     progress_bar=True,
+                     # eval_freq=1000,
+                     # eval_log_path=tb_log_dir
+                     )
+        policy.save(saved_agent_path)
 
-plt.plot(np.mean(rewards, axis=0), label='untrained', alpha=0.7)
-plt.fill_between(np.arange(len(rewards[0])), np.mean(rewards, axis=0) - np.std(rewards, axis=0),
-                 np.mean(rewards, axis=0) + np.std(rewards, axis=0), alpha=0.2)
+    # evaluate the agent
+    train_env.train_mode = False  # remove train mode, avoids calculating the lookahead
+    print("evaluating the agent ...")
+    optimizers_trajectories['agent'] = {}
 
-policy.learn(total_timesteps=agent_training_timesteps)
+    obj_values, trajectories, actions = eval_agent(train_env,
+                                                   policy,
+                                                   problem_list=test_problem_list,
+                                                   num_steps=model_training_steps,
+                                                   random_actions=False,
+                                                   )
+    optimizers_trajectories['agent']['obj_values'] = obj_values
+    optimizers_trajectories['agent']['trajectories'] = trajectories
+    if config.policy.model == 'hard':
+        optimizers_trajectories['agent']['actions'] = actions
+    else:
+        optimizers_trajectories['agent']['actions'] = actions
 
-trained_OV, _ , trained_actions = eval_agent(test_env, policy, num_steps=model_training_steps)
-print('objective function shape : ', trained_OV.shape,'\nobjective function : ', trained_OV)
-if config.policy.optimization_mode == 'soft':
-  trained_beta1, trained_beta2, trained_beta3, trained_beta4 = trained_actions[0], trained_actions[1], trained_actions[2], trained_actions[3]
-plt.plot(np.mean(trained_OV, axis=0), label='trained', alpha=0.7)
-plt.fill_between(np.arange(len(trained_OV[0])), np.mean(trained_OV, axis=0) - np.std(trained_OV, axis=0),
-                 np.mean(trained_OV, axis=0) + np.std(trained_OV, axis=0), alpha=0.2)
+        # optimizers_trajectories['agent']['beta1'] = actions[0]
+        # optimizers_trajectories['agent']['beta2'] = actions[1]
 
-# evaluate the handcrafted optimizers
-Object_value_sgd, trajectories_sgd = eval_handcrafted_optimizer(test_problem_list, torch.optim.SGD, model_training_steps,
-                                         do_init_weights=False, config=config)
-Object_value_rmsprop, trajectories_rmsprop = eval_handcrafted_optimizer(test_problem_list, torch.optim.RMSprop, model_training_steps,
-                                             do_init_weights=False, config=config)
-Object_value_adam, trajectories_adam = eval_handcrafted_optimizer(test_problem_list, torch.optim.Adam, model_training_steps,
-                                          do_init_weights=False, config=config)
+    # evaluate a random agent
+    print("evaluating a random agent ...")
+    optimizers_trajectories['random_agent'] = {}
 
-plt.plot(np.mean(Object_value_sgd, axis=0), label="SGD", alpha=0.7, color='red', ls='--')
-plt.plot(np.mean(Object_value_rmsprop, axis=0), label="RMSprop", alpha=0.7, color='blue', ls='--')
-plt.plot(np.mean(Object_value_adam, axis=0), label="Adam", alpha=0.7, color='green', ls='--')
+    obj_values, trajectories, actions = eval_agent(train_env,
+                                                   policy,
+                                                   problem_list=test_problem_list,
+                                                   num_steps=model_training_steps,
+                                                   random_actions=True,
+                                                   )
+    optimizers_trajectories['random_agent']['obj_values'] = obj_values
+    optimizers_trajectories['random_agent']['trajectories'] = trajectories
+    if config.policy.model == 'hard':
+        optimizers_trajectories['random_agent']['actions'] = actions
+    else:
+        optimizers_trajectories['random_agent']['actions'] = actions
+        # optimizers_trajectories['random_agent']['beta1'] = actions[0]
+        # optimizers_trajectories['random_agent']['beta2'] = actions[1]
 
-plt.legend()
-plt.show()
-plt.savefig('eval.png')
-plt.close()
+    # evaluate the handcrafted optimizers
+    for optimizer_class in optimizer_class_list:
+        optimizer_name = optimizer_class.__name__
+        print("evaluating ", optimizer_name)
+        optimizers_trajectories[optimizer_name] = {}
+        obj_values, trajectories = eval_handcrafted_optimizer(test_problem_list,
+                                                              optimizer_class,
+                                                              model_training_steps,
+                                                              config,
+                                                              do_init_weights=False,
+                                                              lr=test_problem_list[0].tuned_lrs[optimizer_class], )
 
-if config.policy.optimization_mode == 'soft':
-  plt.plot(np.mean(trained_beta1, axis=0), label='trained_actions')
-  plt.legend()
-  plt.show()
-  plt.savefig('Beta1.png')
-  plt.close()
+        optimizers_trajectories[optimizer_name]['obj_values'] = obj_values
+        optimizers_trajectories[optimizer_name]['trajectories'] = trajectories
+
+    # calculate a score matrix storing the aera under the curve for each optimizer
+    # and each starting point
+    score_matrix = np.zeros((nb_test_points, len(optimizers_trajectories.keys())))
+    for j, optimizer_name in enumerate(optimizers_trajectories.keys()):
+        obj_values = optimizers_trajectories[optimizer_name]['obj_values']
+        for i in range(nb_test_points):
+            # score_matrix[i, j] = first_index_below_threshold(obj_values[i], threshold)
+            score_matrix[i, j] = np.mean(obj_values[i][:])
+
+    # list of best optimizers for each starting point.
+    # if the agent is in a tie with a handcrafted optimizer, the agent wins
+    best_optimizer_list = []
+    for i in range(nb_test_points):
+        best_score = np.inf
+        best_optimizer = "agent"
+        for j, optimizer_name in enumerate(optimizers_trajectories.keys()):
+            if score_matrix[i, j] < best_score:
+                best_score = score_matrix[i, j]
+                best_optimizer = optimizer_name
+        best_optimizer_list.append(best_optimizer)
+
+    optimizers_scores = {}
+    for optimizer_name in optimizers_trajectories.keys():
+        optimizers_scores[optimizer_name] = np.mean(np.array(best_optimizer_list) == optimizer_name)
+
+    print("optimizers scores : ", optimizers_scores)
+    with open('readme.txt', 'a') as f:
+        f.write(f'optimizers scores : , {optimizers_scores}')
+    do_plot = False
+    if do_plot:
+
+        # plot mean objective value for each optimizer on the same plot
+        plt.figure(figsize=(10, 6))
+        for optimizer_name, optimizer_trajectories in optimizers_trajectories.items():
+            obj_values = optimizer_trajectories['obj_values']
+            plt.plot(np.mean(obj_values, axis=0), label=optimizer_name)
+            print(optimizer_name, " mean obj value : ", np.mean(obj_values, axis=0)[-1])
+        plt.legend()
+        plt.show()
+        plt.close()
+
+        # plot the histogram of the scores for each optimizer
+        fig, ax = plt.subplots(1, 1, figsize=(8, 6))
+        for j, optimizer_name in enumerate(optimizers_trajectories.keys()):
+            ax.hist(score_matrix[:, j], bins=100, label=optimizer_name, alpha=0.5)
+        ax.legend()
+        ax.set_xlabel('mean objective value')
+        ax.set_ylabel('number of test points')
+        ax.set_title('Histogram of the mean objective value for each optimizer')
+
+        # get indices where the agent is the best optimizer
+        plotted_starting_points = [i for i, x in enumerate(best_optimizer_list) if x == "agent"]
+        if len(plotted_starting_points) < 10:
+            plotted_starting_points.extend(random.sample(range(nb_test_points), 10 - len(plotted_starting_points)))
+        else:
+            plotted_starting_points = plotted_starting_points[:10]
+
+        # for each starting point, plot the objective values of every optimizer
+        fig, axs = plt.subplots(2, 5, figsize=(20, 10))
+        for i, starting_point in enumerate(plotted_starting_points):
+            ax = axs[i // 5, i % 5]
+            for j, optimizer_name in enumerate(optimizers_trajectories.keys()):
+                ax.plot(optimizers_trajectories[optimizer_name]['obj_values'][starting_point], label=optimizer_name)
+            ax.set_title('starting point ' + str(starting_point))
+            ax.set_xlabel('iteration')
+            ax.set_ylabel('objective value')
+            ax.legend()
+        plt.show()
+
+        # analyze the actions taken by the agent
+        if config.policy.model == 'hard':
+            actions = optimizers_trajectories["agent"]['actions']
+            if len(actions.shape) == 2:
+                actions = np.expand_dims(actions, axis=2)
+
+            for actions_coeff_idx in range(actions.shape[-1]):
+                beta = actions[:, :, actions_coeff_idx]
+                # put all actions in a single array and plot the matrix
+                fig, ax = plt.subplots(1, figsize=(10, 10))
+                ax.imshow(beta)
+                ax.set_title('actions taken by the agent')
+                ax.set_xlabel('step')
+                ax.set_ylabel('starting point')
+                plt.show()
+        else:
+            actions = optimizers_trajectories["agent"]['actions']
+            if len(actions.shape) == 2:
+                actions = np.expand_dims(actions, axis=2)
+
+            for actions_coeff_idx in range(actions.shape[-1]):
+                beta = actions[:, :, actions_coeff_idx]
+                # put all actions in a single array and plot the matrix
+                fig, ax = plt.subplots(1, figsize=(10, 10))
+                print(beta)
+                ax.imshow(beta)
+                ax.set_title('actions taken by the agent')
+                ax.set_xlabel('step')
+                ax.set_ylabel('starting point')
+                plt.show()
+            # beta1 = optimizers_trajectories["agent"]['beta1']
+            # beta2 = optimizers_trajectories["agent"]['beta2']
+            # if len(beta1.shape) == 2:
+            #     beta1 = np.expand_dims(beta1, axis=2)
+            # if len(beta2.shape) == 2:
+            #     beta2 = np.expand_dims(beta2, axis=2)
+            #
+            # for actions_coeff_idx in range(beta1.shape[-1]):
+            #     beta = beta1[:, :, actions_coeff_idx]
+            #     # put all actions in a single array and plot the matrix
+            #     fig, ax = plt.subplots(1, figsize=(10, 10))
+            #     ax.imshow(beta)
+            #     ax.set_title('actions taken by the agent')
+            #     ax.set_xlabel('step')
+            #     ax.set_ylabel('starting point')
+            #     plt.show()
+            # for actions_coeff_idx in range(beta2.shape[-1]):
+            #     beta = beta2[:, :, actions_coeff_idx]
+            #     # put all actions in a single array and plot the matrix
+            #     fig, ax = plt.subplots(1, figsize=(10, 10))
+            #     ax.imshow(beta)
+            #     ax.set_title('actions taken by the agent')
+            #     ax.set_xlabel('step')
+            #     ax.set_ylabel('starting point')
+            #     plt.show()
+
+    return optimizers_scores, optimizers_trajectories
 
 
-  plt.plot(np.mean(trained_beta2, axis=0), label='trained_actions')
-  plt.legend()
-  plt.show()
-  plt.savefig('Beta2.png')
-  plt.close()
+if __name__ == '__main__':
+    num_cpu = 3
 
-  plt.plot(np.mean(trained_beta3, axis=0), label='trained_actions')
-  plt.legend()
-  plt.show()
-  plt.savefig('Beta3.png')
-  plt.close()
+    config = OmegaConf.load('config.yaml')
+    tb_log_dir = 'tb_logs/' + config.problem.train + ' ' + config.policy.optimization_mode
+    # number of agent training episodes
+    num_agent_runs = config.model.num_agent_runs
+    # number of steps in each episode
+    model_training_steps = config.model.model_training_steps
 
-  plt.plot(np.mean(trained_beta4, axis=0), label='trained_actions')
-  plt.legend()
-  plt.show()
-  plt.savefig('Beta4.png')
-  plt.close()
+    agent_training_timesteps = num_agent_runs * model_training_steps
+    history_len = config.model.history_len
+    exploration_fraction = config.policy.exploration_fraction
+    lr = config.model.lr
+    # define the problem list
 
-if config.policy.optimization_mode == 'hard':
-  plt.plot(np.mean(actions, axis=0), label='actions')
-  plt.plot(np.mean(trained_actions, axis=0), label='trained_actions')
-  plt.legend()
-  plt.show()
-  plt.savefig('trained_actions.png')
-  plt.close()
+    ### parameters specific to math problems
+
+    reward_system = config.environment.reward_system
+    optimization_mode = config.policy.optimization_mode
+    problem_trains = ['Gaussian', 'Noisy', 'Ackley', 'Rastrigin', 'Norm']
+    problem_tests = ['Gaussian', 'Noisy', 'Ackley', 'Rastrigin', 'Norm']
+
+    for problem_train in problem_trains:
+        for problem_test in problem_tests:
+            with open('readme.txt', 'a') as f:
+                f.write(f'\n')
+            for i in range(5):
+                print('\nproblem_train : ', problem_train, '  problem_test : ', problem_test)
+                with open('readme.txt', 'a') as f:
+                    f.write(f'problem_train : , {problem_train},   problem_test : , {problem_test} \n')
+
+                if problem_train == 'MNIST':
+                    nb_test_points = 100
+                    binary_classes = [[2, 3], [4, 5], [6, 7], [8, 9]]
+                    train_problem_list = [ImageDatasetProblemClass(classes=bc, dataset_class=torchvision.datasets.MNIST) for
+                                          bc in
+                                          binary_classes]
+                    test_problem_list = [ImageDatasetProblemClass(classes=[0, 1], dataset_class=torchvision.datasets.MNIST)
+                                         for _ in
+                                         range(nb_test_points)]
+                    threshold = 0.05
+
+
+                else:
+                    xlim = 2
+                    nb_test_points = 500
+                    if problem_train == 'Gaussian':
+                        math_problem_train_class = GaussianHillsProblem
+                    elif problem_train == 'Noisy':
+                        math_problem_train_class = NoisyHillsProblem
+                    elif problem_train == 'Ackley':
+                        math_problem_train_class = AckleyProblem
+                    elif problem_train == 'Rastrigin':
+                        math_problem_train_class = RastriginProblem
+                    elif problem_train == 'Norm':
+                        math_problem_train_class = NormProblem
+
+                    if problem_test == 'Gaussian':
+                        math_problem_eval_class = GaussianHillsProblem
+                    elif problem_test == 'Noisy':
+                        math_problem_eval_class = NoisyHillsProblem
+                    elif problem_test == 'Ackley':
+                        math_problem_eval_class = AckleyProblem
+                    elif problem_test == 'Rastrigin':
+                        math_problem_eval_class = RastriginProblem
+                    elif problem_test == 'Norm':
+                        math_problem_eval_class = NormProblem
+
+                    train_problem_list = [math_problem_train_class(x0=np.random.uniform(-xlim, xlim, size=(2)))
+                                          for _ in range(num_agent_runs)]
+                    test_problem_list = [math_problem_eval_class(x0=np.random.uniform(-xlim, xlim, size=(2)))
+                                         for _ in range(nb_test_points)]
+
+                    # meshgrid for plotting the problem surface
+                    x = np.arange(-xlim, xlim, xlim / 100)
+                    y = np.arange(-xlim, xlim, xlim / 100)
+                    X, Y = np.meshgrid(x, y)
+                    X, Y = torch.tensor(X), torch.tensor(Y)
+                    Z = math_problem_eval_class().function_def(X, Y)
+                    Z = Z.detach().numpy()
+
+                    # calculate minimum of the problem surface
+                    # and determine the threshold for the reward function
+                    function_min = np.min(Z)
+                    # print('test function minimum: ', function_min)
+                    threshold = function_min + 0.001
+
+                # optimizer classes
+                optimizer_class_list = [torch.optim.SGD, torch.optim.Adam, torch.optim.RMSprop]
+
+                optimizers_scores, optimizers_trajectories = train_and_eval_agent(
+                    train_problem_list=train_problem_list,
+                    test_problem_list=test_problem_list,
+                    agent_training_timesteps=agent_training_timesteps,
+                    exploration_fraction=exploration_fraction,
+                    history_len=history_len,
+                    optimization_mode=optimization_mode,
+                    lr=lr,
+                    reward_system=reward_system,
+                    threshold=threshold,
+                    optimizer_class_list=optimizer_class_list,
+                )

@@ -1,18 +1,28 @@
 model:
-  num_problems : 4500
-  num_agent_runs : 4500
-  model_training_steps : 700
-  history_len: 50
-  untrained_agent_episode_steps : 10
+  num_problems : 1000
+  num_agent_runs : 1000
+  model_training_steps : 100
+  history_len: 25
+  epochs : 10
   lr : 0.01
-  
-problem : 'AckleyProblem' #options:['MNIST', 'SquareProblem', 'AckleyProblem', 'MLPProblem']
+
+
+problem :
+  train : 'MNIST' #options:['MNIST', 'Gaussian', 'Noisy']
+  test : 'MNIST' #options:['MNIST', 'Gaussian', 'Noisy']
 
 policy:
-  model: 'PPO' # options:['DQN', 'PPO']  info: DQN for hard method, PPO for soft method.
-  exploration_fraction : 0.5
-  optimization_mode : 'soft' # options:['soft', 'hard']
+  model: 'DQN' # options:['DQN', 'PPO']  info: DQN for hard method, PPO for soft method.
+  exploration_fraction : 0.1
+  optimization_mode : 'hard' # options:['soft', 'hard']
+  trained : false
 
 environment:
-  reward_system : "function" # options:['function', 'lookahead']  # info: Lookahead only for hard method.
-  optimizer_storing : "dict" # options:['dict', optimizer_class']
+  reward_system : "adathreshold" # options:['adathreshold', 'opposite', threshold, 'inverse', 'lookahead']  # info: Lookahead only for hard method.
+  optimizer_storing_method : "state_dict" # options:['dict', optimizer_class']
+
+# MNIST   DQN Hard
+# adathreshold {'agent': 0.55, 'random_agent': 0.02, 'SGD': 0.02, 'Adam': 0.21, 'RMSprop': 0.2}
+# threshold    {'agent': 0.39, 'random_agent': 0.02, 'SGD': 0.0, 'Adam': 0.39, 'RMSprop': 0.2}
+# opposite     {'agent': 0.43, 'random_agent': 0.02, 'SGD': 0.0, 'Adam': 0.35, 'RMSprop': 0.2}
+# inverse      {'agent': 0.16, 'random_agent': 0.1, 'SGD': 0.0, 'Adam': 0.35, 'RMSprop': 0.39}

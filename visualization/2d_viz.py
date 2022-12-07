@@ -19,6 +19,7 @@ X, Y = torch.tensor(X), torch.tensor(Y)
 Z = problem().function_def(X, Y)
 Z = Z.detach().numpy()
 
+
 plt.contourf(X, Y, Z)
 plt.colorbar()
 plt.show()
