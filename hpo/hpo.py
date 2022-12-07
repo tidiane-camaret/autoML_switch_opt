@@ -72,32 +72,46 @@ def sweep_function():
         test_problem_list = [ImageDatasetProblemClass(classes = [0,1], dataset_class=torchvision.datasets.MNIST) for _ in range(nb_test_points)]
         threshold = 0.05
 
-    elif wandb.config.problem_train == 'All':
-        xlim = 2
-        nb_test_points = 500
-        train_problem_list = [random.choice([GaussianHillsProblem, NoisyHillsProblem, AckleyProblem, RastriginProblem, NormProblem])(x0=np.random.uniform(-xlim, xlim, size=(2))) 
-                            for _ in range(nb_train_points)]
-
     else :
-        xlim = 2
-        nb_test_points = 500
-        if wandb.config.problem_train == 'Gaussian':
-            train_problem_class_list = [GaussianHillsProblem]
-        elif wandb.config.problem_train == 'Noisy':
-            train_problem_class_list = [NoisyHillsProblem]
-        elif wandb.config.problem_train == 'Ackley':
-            train_problem_class_list = [AckleyProblem]
-        elif wandb.config.problem_train == 'Rastrigin':
-            train_problem_class_list = [RastriginProblem]
-        elif wandb.config.problem_train == 'Norm':
-            train_problem_class_list = [NormProblem]
-        elif wandb.config.problem_train == 'All':
-            train_problem_class_list = [GaussianHillsProblem, NoisyHillsProblem, AckleyProblem, RastriginProblem, NormProblem]
+        if wandb.config.problem_train == 'All':
+            xlim = 2
+            nb_test_points = 500
+            train_problem_list = [random.choice([GaussianHillsProblem, NoisyHillsProblem, AckleyProblem, RastriginProblem, NormProblem])(x0=np.random.uniform(-xlim, xlim, size=(2))) 
+                                for _ in range(nb_train_points)]
 
-        train_problem_list = [random.choice(train_problem_class_list)(x0=np.random.uniform(-xlim, xlim, size=(2))) 
-                            for _ in range(nb_train_points)]
+        else :
+            xlim = 2
+            nb_test_points = 500
+            if wandb.config.problem_train == 'Gaussian':
+                train_problem_class_list = [GaussianHillsProblem]
+            elif wandb.config.problem_train == 'Noisy':
+                train_problem_class_list = [NoisyHillsProblem]
+            elif wandb.config.problem_train == 'Ackley':
+                train_problem_class_list = [AckleyProblem]
+            elif wandb.config.problem_train == 'Rastrigin':
+                train_problem_class_list = [RastriginProblem]
+            elif wandb.config.problem_train == 'Norm':
+                train_problem_class_list = [NormProblem]
+            elif wandb.config.problem_train == 'All':
+                train_problem_class_list = [GaussianHillsProblem, NoisyHillsProblem, AckleyProblem, RastriginProblem, NormProblem]
+
+            train_problem_list = [random.choice(train_problem_class_list)(x0=np.random.uniform(-xlim, xlim, size=(2))) 
+                                for _ in range(nb_train_points)]
 
         
+        # meshgrid for plotting the problem surface
+        x = np.arange(-xlim, xlim, xlim / 100)
+        y = np.arange(-xlim, xlim, xlim / 100)
+        X, Y = np.meshgrid(x, y)
+        X, Y = torch.tensor(X), torch.tensor(Y)
+        Z = train_problem_list[0]().function_def(X, Y)
+        Z = Z.detach().numpy()
+
+        # calculate minimum of the problem surface
+        # and determine the threshold for the reward function
+        function_min = np.min(Z)
+        #print('test function minimum: ', function_min)
+        threshold = function_min + 0.001
 
         if wandb.config.problem_test == 'Gaussian':
             test_problem_class = GaussianHillsProblem
@@ -116,19 +130,7 @@ def sweep_function():
         test_problem_list = [test_problem_class(x0=np.random.uniform(-xlim, xlim, size=(2))) 
                             for _ in range(nb_test_points)]
 
-        # meshgrid for plotting the problem surface
-        x = np.arange(-xlim, xlim, xlim / 100)
-        y = np.arange(-xlim, xlim, xlim / 100)
-        X, Y = np.meshgrid(x, y)
-        X, Y = torch.tensor(X), torch.tensor(Y)
-        Z = train_problem_list[0]().function_def(X, Y)
-        Z = Z.detach().numpy()
 
-        # calculate minimum of the problem surface
-        # and determine the threshold for the reward function
-        function_min = np.min(Z)
-        #print('test function minimum: ', function_min)
-        threshold = function_min + 0.001
 
 
 
