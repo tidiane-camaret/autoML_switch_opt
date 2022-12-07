@@ -104,7 +104,7 @@ def sweep_function():
         y = np.arange(-xlim, xlim, xlim / 100)
         X, Y = np.meshgrid(x, y)
         X, Y = torch.tensor(X), torch.tensor(Y)
-        Z = train_problem_list[0]().function_def(X, Y)
+        Z = train_problem_list[0].function_def(X, Y)
         Z = Z.detach().numpy()
 
         # calculate minimum of the problem surface
