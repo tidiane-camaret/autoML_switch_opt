@@ -35,38 +35,13 @@ def eval_agent(env, policy, problem_list=None, num_episodes=100, num_steps=5, ra
         return obj_values, np.array(trajectories), actions
 
     else:
-        if problem_list is None:
-            problem_list = env.problem_list
-
-        actions = np.zeros((len(problem_list), num_steps))
-        obj_values = np.zeros((len(problem_list), num_steps))
-        trajectories = []
-
-        for episode, problem in enumerate(problem_list):
-            t = []
-            obs = env.reset(problem=problem)
-            for step in range(num_steps):
-                if random_actions:
-                    action = env.action_space.sample()
-                else:
-                    action, _states = policy.predict(obs)
-                obs, reward, done, info = env.step(action)
-                actions[episode, step] = action
-                obj_values[episode, step] = info["obj_value"]
-
-                t.append(info["traj_position"])
-                if done:
-                    break
-            trajectories.append(t)
-        return obj_values, np.array(trajectories), actions
         # if problem_list is None:
         #     problem_list = env.problem_list
-        #
-        # beta1 = np.zeros((len(problem_list), num_steps))
-        # beta2 = np.zeros((len(problem_list), num_steps))
+
+        # actions = np.zeros((len(problem_list), num_steps))
         # obj_values = np.zeros((len(problem_list), num_steps))
         # trajectories = []
-        #
+
         # for episode, problem in enumerate(problem_list):
         #     t = []
         #     obs = env.reset(problem=problem)
@@ -76,15 +51,42 @@ def eval_agent(env, policy, problem_list=None, num_episodes=100, num_steps=5, ra
         #         else:
         #             action, _states = policy.predict(obs)
         #         obs, reward, done, info = env.step(action)
-        #         beta1[episode, step] = action[0]
-        #         beta2[episode, step] = action[1]
+        #         actions[episode, step] = action
         #         obj_values[episode, step] = info["obj_value"]
-        #
+
         #         t.append(info["traj_position"])
         #         if done:
         #             break
         #     trajectories.append(t)
-        # return obj_values, np.array(trajectories), (beta1, beta2)
+        # return obj_values, np.array(trajectories), actions
+
+        
+        if problem_list is None:
+            problem_list = env.problem_list
+        
+        beta1 = np.zeros((len(problem_list), num_steps))
+        beta2 = np.zeros((len(problem_list), num_steps))
+        obj_values = np.zeros((len(problem_list), num_steps))
+        trajectories = []
+        
+        for episode, problem in enumerate(problem_list):
+            t = []
+            obs = env.reset(problem=problem)
+            for step in range(num_steps):
+                if random_actions:
+                    action = env.action_space.sample()
+                else:
+                    action, _states = policy.predict(obs)
+                obs, reward, done, info = env.step(action)
+                beta1[episode, step] = action[0]
+                beta2[episode, step] = action[1]
+                obj_values[episode, step] = info["obj_value"]
+        
+                t.append(info["traj_position"])
+                if done:
+                    break
+            trajectories.append(t)
+        return obj_values, np.array(trajectories), (beta1, beta2)
 
 def eval_handcrafted_optimizer(problem_list, optimizer_class, num_steps, config, do_init_weights=False, optimizer_2_class=None, switch_time=None, lr = config.model.lr):
     """

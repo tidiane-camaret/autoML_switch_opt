@@ -82,8 +82,8 @@ class Environment(gym.Env):
         if self.optimization_mode == 'hard':
             self.action_space = spaces.Discrete(len(self.optimizer_class_list))
         elif self.optimization_mode == 'soft':
-            # self.action_space = spaces.Box(low=np.array([0.1, 0.998]), high=np.array([0.9, 0.999]))
-            self.action_space = spaces.Discrete(4)
+            self.action_space = spaces.Box(low=np.array([0.5, 0.998]), high=np.array([0.9, 0.999]), dtype=np.float32)
+            # self.action_space = spaces.Discrete(4)
         else:
             print('mode of optimization is not set properly. Deufalut is hard')
             self.action_space = spaces.Discrete(len(self.optimizer_class_list))
@@ -134,9 +134,10 @@ class Environment(gym.Env):
             None, self.obj_values, self.gradients, self.num_params, self.history_len
         )
 
+
     # define the action : pick an optimizer
     # and update the model
-
+    @torch.no_grad()
     def step(self, action):
         # here, an action is given by the agent
         # it is the index of the optimizer class
@@ -144,15 +145,15 @@ class Environment(gym.Env):
         # we calulate the new state and the reward
         if self.optimization_mode == 'soft':
             for param in self.optimizer.param_groups:
-                # param['betas'] = (action[0], action[1], 0, 0)
-                if action == 0:
-                    param['betas'] = (0.9, 0.999, 0.9, 0.999)
-                if action == 1:
-                    param['betas'] = (0.999, 0.9,  0.9, 0.999)
-                if action == 2:
-                    param['betas'] = (0.999, 0.999,  0.9, 0.999)
-                else:
-                    param['betas'] = (0.9, 0.9, 0.9, 0.999)
+                param['betas'] = (action[0], action[1], 0.9, 0.999)  #(action[0] * 0.1 + 0.7, action[1] * 0.001 + 0.998, 0.9, 0.999)     #* 0.499 + 0.5
+                # if action == 0:
+                #     param['betas'] = (0.9, 0.999, 0.9, 0.999)
+                # if action == 1:
+                #     param['betas'] = (0.999, 0.9,  0.999, 0.9)
+                # if action == 2:
+                #     param['betas'] = (0.999, 0.999, 0.999, 0.999)
+                # else:
+                #     param['betas'] = (0.9, 0.9,0.9, 0.9)
             # update the model and
             # calculate the new objective value
             with torch.enable_grad():
