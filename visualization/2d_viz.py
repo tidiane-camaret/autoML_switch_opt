@@ -3,7 +3,7 @@ from problem import NoisyHillsProblem, GaussianHillsProblem, RosenbrockProblem\
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import LogNorm
-from eval_functions import eval_agent, eval_handcrafted_optimizer, eval_switcher_optimizer, first_index_below_threshold
+from eval_functions import eval_agent, eval_handcrafted_optimizer, first_index_below_threshold
 import torch 
 
 # problem instance
@@ -30,7 +30,9 @@ fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
 ax.plot_surface(X, Y, Z, rstride=1, cstride=1, 
                 edgecolor='none', alpha=.8, cmap=plt.cm.jet)
+ax.set_axis_off()
 plt.show()
+
 
 
 #print(np.min(Z))  

@@ -243,10 +243,10 @@ def train_and_eval_agent(train_problem_list=train_problem_list,
     # if the agent is in a tie with a handcrafted optimizer, the agent wins
     best_optimizer_list = []
     for i in range(nb_test_points):
-        best_score = np.inf
+        best_score = 0#np.inf
         best_optimizer = "agent"
         for j, optimizer_name in enumerate(optimizers_trajectories.keys()):
-            if score_matrix[i, j] < best_score:
+            if score_matrix[i, j] > best_score:
                 best_score = score_matrix[i, j]
                 best_optimizer = optimizer_name
         best_optimizer_list.append(best_optimizer)
@@ -322,6 +322,7 @@ def train_and_eval_agent(train_problem_list=train_problem_list,
     return optimizers_scores, optimizers_trajectories
 
 if __name__ == '__main__':
+
     run = wandb.init(reinit=True, 
                                     project="switching_optimizers", 
                                     group = "main",
@@ -332,6 +333,7 @@ if __name__ == '__main__':
                                             "history_len": config.model.history_len,
                                             "lr": config.model.lr,
                                             "exploration_fraction": config.policy.exploration_fraction})
+
 
 
     optimizers_scores, optimizers_trajectories = train_and_eval_agent()

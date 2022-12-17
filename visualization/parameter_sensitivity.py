@@ -17,7 +17,7 @@ if __name__ == "__main__":
 
 
     problemclass_train_list = [GaussianHillsProblem] #all_problems_class_list + ["none","all_except_eval"]
-    problemclass_eval_list = [NoisyHillsProblem] #all_problems_class_list
+    problemclass_eval_list = [GaussianHillsProblem] #all_problems_class_list
 
     # every possible pair of problemclass 
     problemclass_pairs = [(train, eval) for train in problemclass_train_list for eval in problemclass_eval_list]

@@ -419,7 +419,7 @@ class ImageDatasetProblemClass:
     def __init__(self,
                  classes,
                  dataset_class = datasets.FashionMNIST,
-                 batch_size=5,
+                 batch_size=40,
                  num_classes_selected=2,
                  weights_flag=False
                  ):
@@ -436,25 +436,25 @@ class ImageDatasetProblemClass:
         transform = transforms.Compose([transforms.ToTensor(), transforms.Resize(10),
                                         transforms.Normalize((0.5,), (0.5,))
                                         ])
-        mnist_trainset = dataset_class(root='./data', train=True, download=True, transform=transform)
+        dataset = dataset_class(root='./data', download=True, transform=transform)
 
         # Selecting the classes chosen  from train dataset
-        idx = (mnist_trainset.targets == self.classes[0]) | (mnist_trainset.targets == self.classes[1])
+        idx = (dataset.targets == self.classes[0]) | (dataset.targets == self.classes[1])
 
-        mnist_trainset.targets = mnist_trainset.targets[idx]
-        mnist_trainset.data = mnist_trainset.data[idx]
+        dataset.targets = dataset.targets[idx]
+        dataset.data = dataset.data[idx]
 
         # assign classes to 0 or 1 label - for proper computing of loss
-        for i in range(0, len(mnist_trainset.targets)):
-            if mnist_trainset.targets[i] == self.classes[0]:
+        for i in range(0, len(dataset.targets)):
+            if dataset.targets[i] == self.classes[0]:
 
-                mnist_trainset.targets[i] = 0
+                dataset.targets[i] = 0
             else:
 
-                mnist_trainset.targets[i] = 1
+                dataset.targets[i] = 1
 
         # set dataset
-        self.dataset = mnist_trainset
+        self.train_dataset, self.test_dataset = torch.utils.data.random_split(dataset, [0.8, 0.2])
 
         # model definition
 
@@ -496,29 +496,30 @@ class ImageDatasetProblemClass:
             batch_labels = torch.cat((batch_labels, torch.tensor([int(target)])), dim=0)
         return batch_data, batch_labels
 
-    def _obj_function(self, model):
+    def _obj_function(self, model, mode = 'train'):
         # defining criteria of loss
         criterion = nn.BCELoss()
         # use random sampler to get random indices in dataset
         # the indices will determine our random batch
-        mnist_trainset = self.dataset
+        if mode == 'train':
+            dataset = self.train_dataset
+        else:
+            dataset = self.test_dataset
         # get defining indices
-        batch_indices = RandomSampler(mnist_trainset, replacement=True, num_samples=self.batch_size, generator=None)
-        # pass indices to subset in order to get a sample
-        current_batch = Subset(mnist_trainset, list(batch_indices))
-        running_loss = 0
+        data_subset = Subset(dataset, np.random.choice(len(dataset), self.batch_size, replace=False))
         # split the subsample into data and labels to be fed to model
-        batch_data, batch_labels = self.load_data_from_sampler(current_batch)
+        batch_data, batch_labels = self.load_data_from_sampler(data_subset)
         # reshaping bc pytorch wants input of [batch, channel, height, width] - since we have o
         batch_data = batch_data[:, None, :, :]
 
         y_hat = model(batch_data)
-        batch_labels = torch.reshape(batch_labels, (5, 1))
+        batch_labels = torch.reshape(batch_labels, (len(batch_labels), 1))
 
         loss = criterion(y_hat, batch_labels)
-        running_loss += loss.item()
-        self.running_loss = running_loss
-        return loss
-
-    def get_obj_function(self):
-        return self.obj_function
+        
+        if mode == 'train':
+            return loss
+        else:
+            pred_labels = torch.round(y_hat)
+            accuracy = torch.sum(pred_labels == batch_labels) / len(batch_labels)
+            return accuracy

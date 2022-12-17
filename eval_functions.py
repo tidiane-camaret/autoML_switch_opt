@@ -16,6 +16,7 @@ def eval_agent(env, policy, problem_list=None,  num_episodes=10, num_steps=5, ra
         obj_values = np.zeros((len(problem_list), num_steps))
 
         for episode, problem in enumerate(problem_list):
+            print('episode ', episode, )
             t = []
             a = []
             obs = env.reset(problem=problem)
@@ -25,7 +26,7 @@ def eval_agent(env, policy, problem_list=None,  num_episodes=10, num_steps=5, ra
                 else:
                     action, _states = policy.predict(obs)
                 obs, reward, done, info = env.step(action)
-                obj_values[episode, step] = info["obj_value"]
+                obj_values[episode, step] = info["obj_value"] #info["obj_value_test"]
                 a.append(action)
                 t.append(info["traj_position"])
                 if done:
@@ -57,7 +58,7 @@ def eval_handcrafted_optimizer(problem_list, optimizer_class, num_steps, config,
             if isinstance(model, Variable):
                 t.append(copy.deepcopy(model).x.detach().numpy())
             obj_value = problem.obj_function(model)
-            o_v.append(obj_value.detach().numpy())
+            o_v.append(obj_value.detach().numpy())#problem.obj_function(model, mode = "test").detach().numpy())
             optimizer.zero_grad()
             obj_value.backward()
             optimizer.step()

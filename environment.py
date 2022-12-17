@@ -276,6 +276,7 @@ class Environment(gym.Env):
         done = (self.current_step >= self.num_steps)
 
         info = {"obj_value" : obj_value,
+                #"obj_value_test" : self.objective_function(self.model, mode = "test").detach().numpy(),
                 "traj_position" : traj_position}
         self.current_step += 1
 
